@@ -1,1 +1,4 @@
 src/clientversion.cpp export-subst
+*.html linguist-language = c++
+*.cpp linguist-language = c++
+*.hpp linguist-language = c++
