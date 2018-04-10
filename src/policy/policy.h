@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2009-2017 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -28,6 +28,7 @@ static const unsigned int DEFAULT_BLOCK_MAX_SIZE = 1900000;
 static const unsigned int DEFAULT_BLOCK_PRIORITY_SIZE = 0;
 /** Default for -blockmaxweight, which controls the range of block weights the mining code will create **/
 static const unsigned int DEFAULT_BLOCK_MAX_WEIGHT = MaxBlockSize(std::numeric_limits<uint64_t>::max()) - 4000;
+
 /** Default for -blockmintxfee, which sets the minimum feerate for a transaction in blocks created by mining code **/
 static const unsigned int DEFAULT_BLOCK_MIN_TX_FEE = 1000;
 /** The maximum weight for transactions we're willing to relay/mine */
@@ -36,6 +37,7 @@ static const unsigned int MAX_STANDARD_TX_WEIGHT = 400000;
 static const unsigned int MAX_P2SH_SIGOPS = 15;
 /** The maximum number of sigops we're willing to relay/mine in a single tx */
 static const unsigned int MAX_STANDARD_TX_SIGOPS_COST = MaxBlockSigops(std::numeric_limits<uint64_t>::max())/5;
+
 /** Default for -maxmempool, maximum megabytes of mempool memory usage */
 static const unsigned int DEFAULT_MAX_MEMPOOL_SIZE = 300;
 /** Default for -incrementalrelayfee, which sets the minimum feerate increase for mempool limiting or BIP 125 replacement **/
@@ -59,28 +61,28 @@ static const unsigned int DUST_RELAY_TX_FEE = 3000;
  * with. However scripts violating these flags may still be present in valid
  * blocks and we must accept those blocks.
  */
-static const unsigned int STANDARD_SCRIPT_VERIFY_FLAGS = MANDATORY_SCRIPT_VERIFY_FLAGS |
-                                                         SCRIPT_VERIFY_DERSIG |
-                                                         SCRIPT_VERIFY_STRICTENC |
-                                                         SCRIPT_VERIFY_MINIMALDATA |
-                                                         SCRIPT_VERIFY_NULLDUMMY |
-                                                         SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS |
-                                                         SCRIPT_VERIFY_CLEANSTACK |
-                                                         SCRIPT_VERIFY_MINIMALIF |
-                                                         SCRIPT_VERIFY_NULLFAIL |
-                                                         SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY |
-                                                         SCRIPT_VERIFY_CHECKSEQUENCEVERIFY |
-                                                         SCRIPT_VERIFY_LOW_S |
-                                                         SCRIPT_VERIFY_WITNESS |
-                                                         SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM |
-                                                         SCRIPT_VERIFY_WITNESS_PUBKEYTYPE;
+static constexpr unsigned int STANDARD_SCRIPT_VERIFY_FLAGS = MANDATORY_SCRIPT_VERIFY_FLAGS |
+                                                             SCRIPT_VERIFY_DERSIG |
+                                                             SCRIPT_VERIFY_STRICTENC |
+                                                             SCRIPT_VERIFY_MINIMALDATA |
+                                                             SCRIPT_VERIFY_NULLDUMMY |
+                                                             SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS |
+                                                             SCRIPT_VERIFY_CLEANSTACK |
+                                                             SCRIPT_VERIFY_MINIMALIF |
+                                                             SCRIPT_VERIFY_NULLFAIL |
+                                                             SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY |
+                                                             SCRIPT_VERIFY_CHECKSEQUENCEVERIFY |
+                                                             SCRIPT_VERIFY_LOW_S |
+                                                             SCRIPT_VERIFY_WITNESS |
+                                                             SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM |
+                                                             SCRIPT_VERIFY_WITNESS_PUBKEYTYPE;
 
 /** For convenience, standard but not mandatory verify flags. */
-static const unsigned int STANDARD_NOT_MANDATORY_VERIFY_FLAGS = STANDARD_SCRIPT_VERIFY_FLAGS & ~MANDATORY_SCRIPT_VERIFY_FLAGS;
+static constexpr unsigned int STANDARD_NOT_MANDATORY_VERIFY_FLAGS = STANDARD_SCRIPT_VERIFY_FLAGS & ~MANDATORY_SCRIPT_VERIFY_FLAGS;
 
 /** Used as the flags parameter to sequence and nLocktime checks in non-consensus code. */
-static const unsigned int STANDARD_LOCKTIME_VERIFY_FLAGS = LOCKTIME_VERIFY_SEQUENCE |
-                                                           LOCKTIME_MEDIAN_TIME_PAST;
+static constexpr unsigned int STANDARD_LOCKTIME_VERIFY_FLAGS = LOCKTIME_VERIFY_SEQUENCE |
+                                                               LOCKTIME_MEDIAN_TIME_PAST;
 
 CAmount GetDustThreshold(const CTxOut& txout, const CFeeRate& dustRelayFee);
 

@@ -63,6 +63,7 @@ public:
 static const size_t MIN_TRANSACTION_INPUT_WEIGHT = WITNESS_SCALE_FACTOR * ::GetSerializeSize(CTxIn(), SER_NETWORK, PROTOCOL_VERSION);
 static const size_t MAX_INPUTS_PER_BLOCK = MaxBlockSize(std::numeric_limits<uint64_t>::max()) / MIN_TRANSACTION_INPUT_WEIGHT;
 
+
 /** Undo information for a CTransaction */
 class CTxUndo
 {

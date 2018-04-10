@@ -62,6 +62,11 @@ struct Params {
     /** Block height at which UAHF kicks in */
     int UBCHeight;
 	int UBCInitBlockCount;
+    
+	/** UBC Fork to adjust block interval (ForkV1) */
+	int ForkV1Height;
+	
+
     /** Block height at which OP_RETURN replay protection stops */
     int antiReplayOpReturnSunsetHeight;
     /** Committed OP_RETURN value for replay protection */
@@ -88,6 +93,8 @@ struct Params {
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
     int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
+    void UpdateDifficultyAdjustmentIntervalForkV1() {nPowTargetTimespan = 10*1*60;nPowTargetSpacing= 1*60;nRuleChangeActivationThreshold=190;nMinerConfirmationWindow=200;}
+
     void UpdateDifficultyAdjustmentInterval() {nPowTargetTimespan = 200*10*60;nRuleChangeActivationThreshold=190;nMinerConfirmationWindow=200;}
     void UpdateOldDifficultyAdjustmentInterval() {nPowTargetTimespan = 14*24*60*60;nRuleChangeActivationThreshold=1916;nMinerConfirmationWindow=2016;}
     uint256 nMinimumChainWork;

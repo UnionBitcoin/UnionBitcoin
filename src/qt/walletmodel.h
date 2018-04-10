@@ -15,6 +15,8 @@
 
 #include <QObject>
 
+enum OutputType : int;
+
 class AddressTableModel;
 class OptionsModel;
 class PlatformStyle;
@@ -214,9 +216,9 @@ public:
 
     bool hdEnabled() const;
 
-    int getDefaultConfirmTarget() const;
+    OutputType getDefaultAddressType() const;
 
-    bool getDefaultWalletRbf() const;
+    int getDefaultConfirmTarget() const;
 
 private:
     CWallet *wallet;

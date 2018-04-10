@@ -72,7 +72,7 @@ BlockAssembler::Options::Options() {
 BlockAssembler::BlockAssembler(const CChainParams& params, const Options& options) : chainparams(params)
 {
     blockMinFeeRate = options.blockMinFeeRate;
-    // Limit weight to between 4K and MaxBlockSize-4K for sanity:
+    // Limit weight to between 4K and MAX_BLOCK_WEIGHT-4K for sanity:
     unsigned int nAbsMaxSize = MaxBlockSize(std::numeric_limits<uint64_t>::max());
     nBlockMaxWeight = std::max<size_t>(4000, std::min<size_t>(nAbsMaxSize - 4000, options.nBlockMaxWeight));
     nBlockMaxSize = DEFAULT_BLOCK_MAX_SIZE;
@@ -137,6 +137,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     assert(pindexPrev != nullptr);
     nHeight = pindexPrev->nHeight + 1;
 	nBlockMaxWeight = std::min(nBlockMaxWeight, MaxBlockSize(nHeight));
+
     pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus());
     // -regtest only: allow overriding block.nVersion with
     // -blockversion=N to test forking scenarios
@@ -272,9 +273,9 @@ void BlockAssembler::onlyUnconfirmed(CTxMemPool::setEntries& testSet)
 bool BlockAssembler::TestPackage(uint64_t packageSize, int64_t packageSigOpsCost) const
 {
     // TODO: switch to weight-based accounting for packages instead of vsize-based accounting.
-    if (nBlockWeight + WITNESS_SCALE_FACTOR * packageSize >= nBlockMaxWeight)
-        return false;
     if (nBlockSigOpsCost + packageSigOpsCost >= MaxBlockSigops(nHeight))
+        return false;
+    if (nBlockSigOpsCost + packageSigOpsCost >= MAX_BLOCK_SIGOPS_COST)
         return false;
     return true;
 }
@@ -565,7 +566,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
             // Try to compare the mapTx entry to the mapModifiedTx entry
             iter = mempool.mapTx.project<0>(mi);
             if (modit != mapModifiedTx.get<ancestor_score_or_gas_price>().end()) {
-				if (CompareModifiedEntry()(*modit, CTxMemPoolModifiedEntry(iter))) {
+				if (CompareTxMemPoolEntryByAncestorFee()(*modit, CTxMemPoolModifiedEntry(iter))) {
 					// The best entry in mapModifiedTx has higher score
 					// than the one from mapTx.
 					// Switch which transaction (package) to consider

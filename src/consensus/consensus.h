@@ -9,22 +9,23 @@
 #include <stdlib.h>
 #include <stdint.h>
 static const uint64_t UB_FORK_BLOCK_NUM = 498777;
+static const uint64_t UB_FORK1_BLOCK_NUM = 506400;
 
 inline unsigned int MaxBlockSize(uint64_t nblock) {
-    if (nblock < UB_FORK_BLOCK_NUM)
-        return 4000*1000;
+	if (nblock < UB_FORK_BLOCK_NUM)
+		return 4000*1000;
 
-    return (32*1000*1000);
+	return (32*1000*1000);
 }
-//static const unsigned int MAX_TRANSACTION_SIZE = 1000*1000;	
+//static const unsigned int MAX_TRANSACTION_SIZE = 1000*1000;
 inline unsigned int MaxBlockSigops(uint64_t nblock) {
-    return MaxBlockSize(nblock) / 50;
+	return MaxBlockSize(nblock) / 50;
 }
 inline unsigned int MaxBlockSerializedSize(uint64_t nblock){
 	if (nblock < UB_FORK_BLOCK_NUM)
-        return 4000*1000;
+		return 4000*1000;
 
-    return (32*1000*1000);
+	return (32*1000*1000);
 }
 
 /** The maximum allowed size for a serialized block, in bytes (only for buffer size limits) */
@@ -35,6 +36,8 @@ static const unsigned int MAX_BLOCK_WEIGHT = 4000000;
 static const int64_t MAX_BLOCK_SIGOPS_COST = 80000;
 /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
 static const int COINBASE_MATURITY = 100;
+static const int COINBASE_MATURITY_FORKV1 = 7200;
+static const int COINBASE_MATURITY_INVALID = 999999;
 
 static const int WITNESS_SCALE_FACTOR = 4;
 
@@ -46,5 +49,18 @@ static const size_t MIN_SERIALIZABLE_TRANSACTION_WEIGHT = WITNESS_SCALE_FACTOR *
 static constexpr unsigned int LOCKTIME_VERIFY_SEQUENCE = (1 << 0);
 /** Use GetMedianTimePast() instead of nTime for end point timestamp. */
 static constexpr unsigned int LOCKTIME_MEDIAN_TIME_PAST = (1 << 1);
+
+inline int getCoinBaseMaturity(int coinBaseHeight) {
+	if (coinBaseHeight < 0){
+		return COINBASE_MATURITY_INVALID;
+	}
+	else if (coinBaseHeight < UB_FORK1_BLOCK_NUM){
+		return COINBASE_MATURITY;
+	}
+
+	return COINBASE_MATURITY_FORKV1;
+}
+
+
 
 #endif // BITCOIN_CONSENSUS_CONSENSUS_H

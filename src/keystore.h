@@ -25,7 +25,7 @@ public:
 
     //! Add a key to the store.
     virtual bool AddKeyPubKey(const CKey &key, const CPubKey &pubkey) =0;
-	virtual bool AddKeyAddress(const CKey& key, const CKeyID &address)=0;
+   // virtual bool AddKeyAddress(const CKey& key, const CKeyID &address)=0;
     virtual bool AddKey(const CKey &key);
 
     //! Check whether a key corresponding to a given address is present in the store.
@@ -38,6 +38,7 @@ public:
     //! Support for BIP 0013 : see https://github.com/bitcoin/bips/blob/master/bip-0013.mediawiki
     virtual bool AddCScript(const CScript& redeemScript) =0;
     virtual bool HaveCScript(const CScriptID &hash) const =0;
+    virtual std::set<CScriptID> GetCScripts() const =0;
     virtual bool GetCScript(const CScriptID &hash, CScript& redeemScriptOut) const =0;
 
     //! Support for Watch-only addresses
@@ -61,9 +62,11 @@ protected:
     ScriptMap mapScripts;
     WatchOnlySet setWatchOnly;
 
+    void ImplicitlyLearnRelatedKeyScripts(const CPubKey& pubkey);
+
 public:
     bool AddKeyPubKey(const CKey& key, const CPubKey &pubkey) override;
-	bool AddKeyAddress(const CKey& key, const CKeyID &address) override;
+    //bool AddKeyAddress(const CKey& key, const CKeyID &address) override;
     bool GetPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const override;
     bool HaveKey(const CKeyID &address) const override;
     std::set<CKeyID> GetKeys() const override;
@@ -71,6 +74,7 @@ public:
 	bool GetHolyGenKey(CKey &keyOut) const override;
     bool AddCScript(const CScript& redeemScript) override;
     bool HaveCScript(const CScriptID &hash) const override;
+    std::set<CScriptID> GetCScripts() const override;
     bool GetCScript(const CScriptID &hash, CScript& redeemScriptOut) const override;
 
     bool AddWatchOnly(const CScript &dest) override;
@@ -81,5 +85,8 @@ public:
 
 typedef std::vector<unsigned char, secure_allocator<unsigned char> > CKeyingMaterial;
 typedef std::map<CKeyID, std::pair<CPubKey, std::vector<unsigned char> > > CryptedKeyMap;
+
+/** Return the CKeyID of the key involved in a script (if there is a unique one). */
+CKeyID GetKeyForDestination(const CKeyStore& store, const CTxDestination& dest);
 
 #endif // BITCOIN_KEYSTORE_H

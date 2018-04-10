@@ -1,5 +1,5 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2009-2017 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -15,6 +15,7 @@
 #include <netbase.h>
 #include <rpc/blockchain.h>
 #include <rpc/server.h>
+#include <rpc/util.h>
 #include <timedata.h>
 #include <util.h>
 #include <utilstrencodings.h>
@@ -40,6 +41,46 @@ public:
 
     explicit DescribeAddressVisitor(CWallet *_pwallet) : pwallet(_pwallet) {}
 
+    void ProcessSubScript(const CScript& subscript, UniValue& obj, bool include_addresses = false) const
+    {
+        // Always present: script type and redeemscript
+        txnouttype which_type;
+        std::vector<std::vector<unsigned char>> solutions_data;
+        Solver(subscript, which_type, solutions_data);
+        obj.pushKV("script", GetTxnOutputType(which_type));
+        obj.pushKV("hex", HexStr(subscript.begin(), subscript.end()));
+
+        CTxDestination embedded;
+        UniValue a(UniValue::VARR);
+        if (ExtractDestination(subscript, embedded)) {
+            // Only when the script corresponds to an address.
+            UniValue subobj = boost::apply_visitor(*this, embedded);
+            subobj.pushKV("address", EncodeDestination(embedded));
+            subobj.pushKV("scriptPubKey", HexStr(subscript.begin(), subscript.end()));
+            // Always report the pubkey at the top level, so that `getnewaddress()['pubkey']` always works.
+            if (subobj.exists("pubkey")) obj.pushKV("pubkey", subobj["pubkey"]);
+            obj.pushKV("embedded", std::move(subobj));
+            if (include_addresses) a.push_back(EncodeDestination(embedded));
+        } else if (which_type == TX_MULTISIG) {
+            // Also report some information on multisig scripts (which do not have a corresponding address).
+            // TODO: abstract out the common functionality between this logic and ExtractDestinations.
+            obj.pushKV("sigsrequired", solutions_data[0][0]);
+            UniValue pubkeys(UniValue::VARR);
+            for (size_t i = 1; i < solutions_data.size() - 1; ++i) {
+                CPubKey key(solutions_data[i].begin(), solutions_data[i].end());
+                if (include_addresses) a.push_back(EncodeDestination(key.GetID()));
+                pubkeys.push_back(HexStr(key.begin(), key.end()));
+            }
+            obj.pushKV("pubkeys", std::move(pubkeys));
+        }
+
+        // The "addresses" field is confusing because it refers to public keys using their P2PKH address.
+        // For that reason, only add the 'addresses' field when needed for backward compatibility. New applications
+        // can use the 'embedded'->'address' field for P2SH or P2WSH wrapped addresses, and 'pubkeys' for
+        // inspecting multisig participants.
+        if (include_addresses) obj.pushKV("addresses", std::move(a));
+    }
+
     UniValue operator()(const CNoDestination &dest) const { return UniValue(UniValue::VOBJ); }
 
     UniValue operator()(const CKeyID &keyID) const {
@@ -60,19 +101,7 @@ public:
         obj.push_back(Pair("isscript", true));
         obj.push_back(Pair("iswitness", false));
         if (pwallet && pwallet->GetCScript(scriptID, subscript)) {
-            std::vector<CTxDestination> addresses;
-            txnouttype whichType;
-            int nRequired;
-            ExtractDestinations(subscript, whichType, addresses, nRequired);
-            obj.push_back(Pair("script", GetTxnOutputType(whichType)));
-            obj.push_back(Pair("hex", HexStr(subscript.begin(), subscript.end())));
-            UniValue a(UniValue::VARR);
-            for (const CTxDestination& addr : addresses) {
-                a.push_back(EncodeDestination(addr));
-            }
-            obj.push_back(Pair("addresses", a));
-            if (whichType == TX_MULTISIG)
-                obj.push_back(Pair("sigsrequired", nRequired));
+            ProcessSubScript(subscript, obj, true);
         }
         return obj;
     }
@@ -103,7 +132,7 @@ public:
         uint160 hash;
         hasher.Write(id.begin(), 32).Finalize(hash.begin());
         if (pwallet && pwallet->GetCScript(CScriptID(hash), subscript)) {
-            obj.push_back(Pair("hex", HexStr(subscript.begin(), subscript.end())));
+            ProcessSubScript(subscript, obj);
         }
         return obj;
     }
@@ -131,23 +160,32 @@ UniValue validateaddress(const JSONRPCRequest& request)
             "\nResult:\n"
             "{\n"
             "  \"isvalid\" : true|false,       (boolean) If the address is valid or not. If not, this is the only property returned.\n"
-            "  \"address\" : \"address\", (string) The bitcoin address validated\n"
+            "  \"address\" : \"address\",        (string) The bitcoin address validated\n"
             "  \"scriptPubKey\" : \"hex\",       (string) The hex encoded scriptPubKey generated by the address\n"
             "  \"ismine\" : true|false,        (boolean) If the address is yours or not\n"
             "  \"iswatchonly\" : true|false,   (boolean) If the address is watchonly\n"
-            "  \"isscript\" : true|false,      (boolean) If the key is a script\n"
-            "  \"script\" : \"type\"             (string, optional) The output script type. Possible types: nonstandard, pubkey, pubkeyhash, scripthash, multisig, nulldata, witness_v0_keyhash, witness_v0_scripthash\n"
-            "  \"hex\" : \"hex\",                (string, optional) The redeemscript for the p2sh address\n"
-            "  \"addresses\"                   (string, optional) Array of addresses associated with the known redeemscript\n"
+            "  \"isscript\" : true|false,      (boolean, optional) If the address is P2SH or P2WSH. Not included for unknown witness types.\n"
+            "  \"iswitness\" : true|false,     (boolean) If the address is P2WPKH, P2WSH, or an unknown witness version\n"
+            "  \"witness_version\" : version   (number, optional) For all witness output types, gives the version number.\n"
+            "  \"witness_program\" : \"hex\"     (string, optional) For all witness output types, gives the script or key hash present in the address.\n"
+            "  \"script\" : \"type\"             (string, optional) The output script type. Only if \"isscript\" is true and the redeemscript is known. Possible types: nonstandard, pubkey, pubkeyhash, scripthash, multisig, nulldata, witness_v0_keyhash, witness_v0_scripthash, witness_unknown\n"
+            "  \"hex\" : \"hex\",                (string, optional) The redeemscript for the P2SH or P2WSH address\n"
+            "  \"addresses\"                   (string, optional) Array of addresses associated with the known redeemscript (only if \"iswitness\" is false). This field is superseded by the \"pubkeys\" field and the address inside \"embedded\".\n"
             "    [\n"
             "      \"address\"\n"
             "      ,...\n"
             "    ]\n"
-            "  \"sigsrequired\" : xxxxx        (numeric, optional) Number of signatures required to spend multisig output\n"
-            "  \"pubkey\" : \"publickeyhex\",    (string) The hex value of the raw public key\n"
+            "  \"pubkeys\"                     (string, optional) Array of pubkeys associated with the known redeemscript (only if \"script\" is \"multisig\")\n"
+            "    [\n"
+            "      \"pubkey\"\n"
+            "      ,...\n"
+            "    ]\n"
+            "  \"sigsrequired\" : xxxxx        (numeric, optional) Number of signatures required to spend multisig output (only if \"script\" is \"multisig\")\n"
+            "  \"pubkey\" : \"publickeyhex\",    (string, optional) The hex value of the raw public key, for single-key addresses (possibly embedded in P2SH or P2WSH)\n"
+            "  \"embedded\" : {...},           (object, optional) information about the address embedded in P2SH or P2WSH, if relevant and known. It includes all validateaddress output fields for the embedded address, excluding \"isvalid\", metadata (\"timestamp\", \"hdkeypath\", \"hdmasterkeyid\") and relation to the wallet (\"ismine\", \"iswatchonly\", \"account\").\n"
             "  \"iscompressed\" : true|false,  (boolean) If the address is compressed\n"
             "  \"account\" : \"account\"         (string) DEPRECATED. The account associated with the address, \"\" is the default account\n"
-            "  \"timestamp\" : timestamp,        (number, optional) The creation time of the key if available in seconds since epoch (Jan 1 1970 GMT)\n"
+            "  \"timestamp\" : timestamp,      (number, optional) The creation time of the key if available in seconds since epoch (Jan 1 1970 GMT)\n"
             "  \"hdkeypath\" : \"keypath\"       (string, optional) The HD keypath if the key is HD and available\n"
             "  \"hdmasterkeyid\" : \"<hash160>\" (string, optional) The Hash160 of the HD master pubkey\n"
             "}\n"
@@ -187,17 +225,25 @@ UniValue validateaddress(const JSONRPCRequest& request)
             ret.push_back(Pair("account", pwallet->mapAddressBook[dest].name));
         }
         if (pwallet) {
-            const auto& meta = pwallet->mapKeyMetadata;
-            const CKeyID *keyID = boost::get<CKeyID>(&dest);
-            auto it = keyID ? meta.find(*keyID) : meta.end();
-            if (it == meta.end()) {
-                it = meta.find(CScriptID(scriptPubKey));
+            const CKeyMetadata* meta = nullptr;
+            CKeyID key_id = GetKeyForDestination(*pwallet, dest);
+            if (!key_id.IsNull()) {
+                auto it = pwallet->mapKeyMetadata.find(key_id);
+                if (it != pwallet->mapKeyMetadata.end()) {
+                    meta = &it->second;
+                }
             }
-            if (it != meta.end()) {
-                ret.push_back(Pair("timestamp", it->second.nCreateTime));
-                if (!it->second.hdKeypath.empty()) {
-                    ret.push_back(Pair("hdkeypath", it->second.hdKeypath));
-                    ret.push_back(Pair("hdmasterkeyid", it->second.hdMasterKeyID.GetHex()));
+            if (!meta) {
+                auto it = pwallet->m_script_metadata.find(CScriptID(scriptPubKey));
+                if (it != pwallet->m_script_metadata.end()) {
+                    meta = &it->second;
+                }
+            }
+            if (meta) {
+                ret.push_back(Pair("timestamp", meta->nCreateTime));
+                if (!meta->hdKeypath.empty()) {
+                    ret.push_back(Pair("hdkeypath", meta->hdKeypath));
+                    ret.push_back(Pair("hdmasterkeyid", meta->hdMasterKeyID.GetHex()));
                 }
             }
         }
@@ -209,88 +255,21 @@ UniValue validateaddress(const JSONRPCRequest& request)
 // Needed even with !ENABLE_WALLET, to pass (ignored) pointers around
 class CWallet;
 
-/**
- * Used by addmultisigaddress / createmultisig:
- */
-CScript _createmultisig_redeemScript(CWallet * const pwallet, const UniValue& params)
-{
-    int nRequired = params[0].get_int();
-    const UniValue& keys = params[1].get_array();
-
-    // Gather public keys
-    if (nRequired < 1)
-        throw std::runtime_error("a multisignature address must require at least one key to redeem");
-    if ((int)keys.size() < nRequired)
-        throw std::runtime_error(
-            strprintf("not enough keys supplied "
-                      "(got %u keys, but need at least %d to redeem)", keys.size(), nRequired));
-    if (keys.size() > 16)
-        throw std::runtime_error("Number of addresses involved in the multisignature address creation > 16\nReduce the number");
-    std::vector<CPubKey> pubkeys;
-    pubkeys.resize(keys.size());
-    for (unsigned int i = 0; i < keys.size(); i++)
-    {
-        const std::string& ks = keys[i].get_str();
-#ifdef ENABLE_WALLET
-        // Case 1: Bitcoin address and we have full public key:
-        CTxDestination dest = DecodeDestination(ks);
-        if (pwallet && IsValidDestination(dest)) {
-            const CKeyID *keyID = boost::get<CKeyID>(&dest);
-            if (!keyID) {
-                throw std::runtime_error(strprintf("%s does not refer to a key", ks));
-            }
-            CPubKey vchPubKey;
-            if (!pwallet->GetPubKey(*keyID, vchPubKey)) {
-                throw std::runtime_error(strprintf("no full public key for address %s", ks));
-            }
-            if (!vchPubKey.IsFullyValid())
-                throw std::runtime_error(" Invalid public key: "+ks);
-            pubkeys[i] = vchPubKey;
-        }
-
-        // Case 2: hex public key
-        else
-#endif
-        if (IsHex(ks))
-        {
-            CPubKey vchPubKey(ParseHex(ks));
-            if (!vchPubKey.IsFullyValid())
-                throw std::runtime_error(" Invalid public key: "+ks);
-            pubkeys[i] = vchPubKey;
-        }
-        else
-        {
-            throw std::runtime_error(" Invalid public key: "+ks);
-        }
-    }
-    CScript result = GetScriptForMultisig(nRequired, pubkeys);
-
-    if (result.size() > MAX_SCRIPT_ELEMENT_SIZE)
-        throw std::runtime_error(
-                strprintf("redeemScript exceeds size limit: %d > %d", result.size(), MAX_SCRIPT_ELEMENT_SIZE));
-
-    return result;
-}
-
 UniValue createmultisig(const JSONRPCRequest& request)
 {
-#ifdef ENABLE_WALLET
-    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
-#else
-    CWallet * const pwallet = nullptr;
-#endif
-
     if (request.fHelp || request.params.size() < 2 || request.params.size() > 2)
     {
         std::string msg = "createmultisig nrequired [\"key\",...]\n"
             "\nCreates a multi-signature address with n signature of m keys required.\n"
             "It returns a json object with the address and redeemScript.\n"
-
+            "DEPRECATION WARNING: Using addresses with createmultisig is deprecated. Clients must\n"
+            "transition to using addmultisigaddress to create multisig addresses with addresses known\n"
+            "to the wallet before upgrading to v0.17. To use the deprecated functionality, start bitcoind with -deprecatedrpc=createmultisig\n"
             "\nArguments:\n"
-            "1. nrequired      (numeric, required) The number of required signatures out of the n keys or addresses.\n"
-            "2. \"keys\"       (string, required) A json array of keys which are bitcoin addresses or hex-encoded public keys\n"
+            "1. nrequired                    (numeric, required) The number of required signatures out of the n keys or addresses.\n"
+            "2. \"keys\"                       (string, required) A json array of hex-encoded public keys\n"
             "     [\n"
-            "       \"key\"    (string) bitcoin address or hex-encoded public key\n"
+            "       \"key\"                    (string) The hex-encoded public key\n"
             "       ,...\n"
             "     ]\n"
 
@@ -301,16 +280,37 @@ UniValue createmultisig(const JSONRPCRequest& request)
             "}\n"
 
             "\nExamples:\n"
-            "\nCreate a multisig address from 2 addresses\n"
-            + HelpExampleCli("createmultisig", "2 \"[\\\"16sSauSf5pF2UkUwvKGq4qjNRzBZYqgEL5\\\",\\\"171sgjn4YtPu27adkKGrdDwzRTxnRkBfKV\\\"]\"") +
+            "\nCreate a multisig address from 2 public keys\n"
+            + HelpExampleCli("createmultisig", "2 \"[\\\"03789ed0bb717d88f7d321a368d905e7430207ebbd82bd342cf11ae157a7ace5fd\\\",\\\"03dbc6764b8884a92e871274b87583e6d5c2a58819473e17e107ef3f6aa5a61626\\\"]\"") +
             "\nAs a json rpc call\n"
-            + HelpExampleRpc("createmultisig", "2, \"[\\\"16sSauSf5pF2UkUwvKGq4qjNRzBZYqgEL5\\\",\\\"171sgjn4YtPu27adkKGrdDwzRTxnRkBfKV\\\"]\"")
+            + HelpExampleRpc("createmultisig", "2, \"[\\\"03789ed0bb717d88f7d321a368d905e7430207ebbd82bd342cf11ae157a7ace5fd\\\",\\\"03dbc6764b8884a92e871274b87583e6d5c2a58819473e17e107ef3f6aa5a61626\\\"]\"")
         ;
         throw std::runtime_error(msg);
     }
 
+    int required = request.params[0].get_int();
+
+    // Get the public keys
+    const UniValue& keys = request.params[1].get_array();
+    std::vector<CPubKey> pubkeys;
+    for (unsigned int i = 0; i < keys.size(); ++i) {
+        if (IsHex(keys[i].get_str()) && (keys[i].get_str().length() == 66 || keys[i].get_str().length() == 130)) {
+            pubkeys.push_back(HexToPubKey(keys[i].get_str()));
+        } else {
+#ifdef ENABLE_WALLET
+            CWallet* const pwallet = GetWalletForJSONRPCRequest(request);
+            if (IsDeprecatedRPCEnabled("createmultisig") && EnsureWalletIsAvailable(pwallet, false)) {
+                pubkeys.push_back(AddrToPubKey(pwallet, keys[i].get_str()));
+            } else
+#endif
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("Invalid public key: %s\nNote that from v0.16, createmultisig no longer accepts addresses."
+            " Clients must transition to using addmultisigaddress to create multisig addresses with addresses known to the wallet before upgrading to v0.17."
+            " To use the deprecated functionality, start bitcoind with -deprecatedrpc=createmultisig", keys[i].get_str()));
+        }
+    }
+
     // Construct using pay-to-script-hash:
-    CScript inner = _createmultisig_redeemScript(pwallet, request.params);
+    CScript inner = CreateMultisigRedeemscript(required, pubkeys);
     CScriptID innerID(inner);
 
     UniValue result(UniValue::VOBJ);
@@ -623,6 +623,18 @@ UniValue echo(const JSONRPCRequest& request)
     return request.params;
 }
 
+static UniValue getinfo_deprecated(const JSONRPCRequest& request)
+{
+    throw JSONRPCError(RPC_METHOD_NOT_FOUND,
+        "getinfo\n"
+        "\nThis call was removed in version 0.16.0. Use the appropriate fields from:\n"
+        "- getblockchaininfo: blocks, difficulty, chain\n"
+        "- getnetworkinfo: version, protocolversion, timeoffset, connections, proxy, relayfee, warnings\n"
+        "- getwalletinfo: balance, keypoololdest, keypoolsize, paytxfee, unlocked_until, walletversion\n"
+        "\nbitcoin-cli has the option -getinfo to collect and format these in the old format."
+    );
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
@@ -637,6 +649,7 @@ static const CRPCCommand commands[] =
     { "hidden",             "setmocktime",            &setmocktime,            {"timestamp"}},
     { "hidden",             "echo",                   &echo,                   {"arg0","arg1","arg2","arg3","arg4","arg5","arg6","arg7","arg8","arg9"}},
     { "hidden",             "echojson",               &echo,                   {"arg0","arg1","arg2","arg3","arg4","arg5","arg6","arg7","arg8","arg9"}},
+    { "hidden",             "getinfo",                &getinfo_deprecated,     {}},
 };
 
 void RegisterMiscRPCCommands(CRPCTable &t)
