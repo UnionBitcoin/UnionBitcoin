@@ -232,7 +232,7 @@ template <typename T> std::vector<char> encoder_result_to_vector(const T& item)
 	return result;
 }
 
-std::string ContractHelper::generate_contract_address(const uvm::blockchain::Code& code, const std::string& caller_address, const CTransaction& txBitcoin, size_t contract_op_vout_index)
+std::string ContractHelper::generate_contract_address(const std::string& caller_address, const CTransaction& txBitcoin, size_t contract_op_vout_index)
 {
 	// contract address = CON + base58(ripemd160(sha256(info)) + prefix_4_bytes(sha256(ripemd160(sha256(info))))
     fc::sha256::encoder enc;

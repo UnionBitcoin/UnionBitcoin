@@ -2802,8 +2802,9 @@ bool ContractTxConverter::parseContractTXParams(ContractTransactionParams& param
 				if (!ContractHelper::is_valid_contract_address_format(params.contract_address))
 					return false;
 			}
-			else
-				params.contract_address = ContractHelper::generate_contract_address(params.code, params.caller_address, txBitcoin, contract_op_vout_index);
+			else {
+				params.contract_address = ContractHelper::generate_contract_address(params.caller_address, txBitcoin, contract_op_vout_index);
+			}
 		}
 
         if(opcode == OP_UPGRADE) {
