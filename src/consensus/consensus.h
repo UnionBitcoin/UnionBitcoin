@@ -12,20 +12,20 @@ static const uint64_t UB_FORK_BLOCK_NUM = 498777;
 static const uint64_t UB_FORK1_BLOCK_NUM = 506400;
 
 inline unsigned int MaxBlockSize(uint64_t nblock) {
-	if (nblock < UB_FORK_BLOCK_NUM)
-		return 4000*1000;
+    if (nblock < UB_FORK_BLOCK_NUM)
+        return 4000*1000;
 
-	return (32*1000*1000);
+    return (32*1000*1000);
 }
 //static const unsigned int MAX_TRANSACTION_SIZE = 1000*1000;
 inline unsigned int MaxBlockSigops(uint64_t nblock) {
-	return MaxBlockSize(nblock) / 50;
+    return MaxBlockSize(nblock) / 50;
 }
 inline unsigned int MaxBlockSerializedSize(uint64_t nblock){
-	if (nblock < UB_FORK_BLOCK_NUM)
-		return 4000*1000;
+    if (nblock < UB_FORK_BLOCK_NUM)
+        return 4000*1000;
 
-	return (32*1000*1000);
+    return (32*1000*1000);
 }
 
 /** The maximum allowed size for a serialized block, in bytes (only for buffer size limits) */
@@ -51,14 +51,14 @@ static constexpr unsigned int LOCKTIME_VERIFY_SEQUENCE = (1 << 0);
 static constexpr unsigned int LOCKTIME_MEDIAN_TIME_PAST = (1 << 1);
 
 inline int getCoinBaseMaturity(int coinBaseHeight) {
-	if (coinBaseHeight < 0){
-		return COINBASE_MATURITY_INVALID;
-	}
-	else if (coinBaseHeight < UB_FORK1_BLOCK_NUM){
-		return COINBASE_MATURITY;
-	}
+    if (coinBaseHeight < 0){
+        return COINBASE_MATURITY_INVALID;
+    }
+    else if (coinBaseHeight < UB_FORK1_BLOCK_NUM){
+        return COINBASE_MATURITY;
+    }
 
-	return COINBASE_MATURITY_FORKV1;
+    return COINBASE_MATURITY_FORKV1;
 }
 
 

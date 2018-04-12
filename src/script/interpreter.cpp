@@ -918,7 +918,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
 					if(chainActive.Height() < Params().GetConsensus().UBCHeight)
 		   			{
                         if (vchSig[vchSig.size() - 1] & SIGHASH_FORKID) {
-                            return set_error(serror, SCRIPT_ERR_CHECKSIGVERIFY);
+                            //return set_error(serror, SCRIPT_ERR_CHECKSIGVERIFY);
                         }
                     }
                     // Drop the signature in pre-segwit scripts but not segwit scripts
