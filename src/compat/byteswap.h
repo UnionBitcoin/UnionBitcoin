@@ -10,6 +10,7 @@
 #endif
 
 #include <stdint.h>
+#include "wintype.h"
 
 #if defined(HAVE_BYTESWAP_H)
 #include <byteswap.h>

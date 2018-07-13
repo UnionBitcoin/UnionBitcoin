@@ -6,6 +6,11 @@
 #include <config/bitcoin-config.h>
 #endif
 
+#ifdef _MSC_VER
+#include <stdio.h>
+extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
+#endif
+
 #include <base58.h>
 #include <clientversion.h>
 #include <coins.h>

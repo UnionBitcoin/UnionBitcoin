@@ -9,6 +9,8 @@
 #include <config/bitcoin-config.h>
 #endif
 
+#include "wintype.h"
+
 #include <compat/byteswap.h>
 
 #include <stdint.h>
