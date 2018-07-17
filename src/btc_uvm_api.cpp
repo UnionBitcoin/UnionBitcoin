@@ -474,7 +474,7 @@ namespace uvm {
 					const auto& contract_storage_changes = pair.second;
 					if (!contract_storage_changes)
 						continue;
-					jsondiff::JsonObject changes;
+					jsondiff::JsonObject nested_changes;
 					for (auto it = contract_storage_changes->begin(); it != contract_storage_changes->end(); it++)
 					{
 						const auto& storage_change = it->second;
@@ -482,19 +482,19 @@ namespace uvm {
 						if (storage_change.is_fast_map)
 							storage_key = storage_change.key + "." + storage_change.fast_map_key;
 						if (storage_change.diff.is_undefined())
-							changes[storage_key] = differ.diff(uvm_storage_value_to_json(storage_change.before), uvm_storage_value_to_json(storage_change.after))->value();
+                            nested_changes[storage_key] = differ.diff(uvm_storage_value_to_json(storage_change.before), uvm_storage_value_to_json(storage_change.after))->value();
 						else
-							changes[storage_key] = storage_change.diff.value();
+                            nested_changes[storage_key] = storage_change.diff.value();
 					}
 					// count gas by changes size
-					const auto& changes_parsed_to_array = nested_json_object_to_array(changes);
+					const auto& changes_parsed_to_array = nested_json_object_to_array(nested_changes);
 					auto changes_size = jsondiff::json_dumps(changes_parsed_to_array).size();
 					storage_gas += changes_size * 10; // 1 byte storage cost 10 gas
 					if (storage_gas < 0 && gas_limit > 0) {
 						throw_exception(L, UVM_API_LVM_LIMIT_OVER_ERROR, out_of_gas_error);
 						return false;
 					}
-					evaluator->contract_storage_changes.push_back(std::make_pair(contract_id, std::make_shared<jsondiff::DiffResult>(changes)));
+					evaluator->contract_storage_changes.push_back(std::make_pair(contract_id, std::make_shared<jsondiff::DiffResult>(nested_changes)));
 				}
 				if (gas_limit > 0) {
 					if (storage_gas > gas_limit || storage_gas + uvm::lua::lib::get_lua_state_instructions_executed_count(L) > gas_limit) {
