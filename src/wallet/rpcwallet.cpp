@@ -1405,7 +1405,7 @@ UniValue callcontract(const JSONRPCRequest& request)
 
 		CBlock block;
 		CMutableTransaction tx;
-		uint64_t gas_limit = 0;
+		uint64_t gas_limit = 100000000;
 		uint64_t gas_price = gasPrice;
 
 		valtype version;
