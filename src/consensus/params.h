@@ -68,7 +68,8 @@ struct Params {
 	/** UBC Fork to adjust block interval (ForkV1) */
 	int ForkV1Height;
 	
-
+    int nStakeMinConfirmations;
+    int COINBASE_MATURITY_FORKV1;
     /** Block height at which OP_RETURN replay protection stops */
     int antiReplayOpReturnSunsetHeight;
     /** Committed OP_RETURN value for replay protection */

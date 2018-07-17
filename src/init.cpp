@@ -1832,7 +1832,7 @@ static void ThreadStakeMiner(CWallet *pwallet)
 		        LOCK(cs_main);
 		        nHeight = pindexBestHeader->nHeight;
 		    }
-    		if (nHeight < Params().GetConsensus().UBCONTRACT_Height-1) 
+    		if (nHeight < Params().GetConsensus().UBCONTRACT_Height) 
     		{
     		    if(!fThreadPOSstate)
     		        break;

@@ -44,7 +44,7 @@
 
 CAmount nMinimumInputValue = 1 * COIN;
 CAmount nReserveBalance = 0;
-extern int nStakeMinConfirmations;
+//extern int nStakeMinConfirmations;
 
 std::vector<CWalletRef> vpwallets;
 /** Transaction fee set by the user */
@@ -4533,7 +4533,7 @@ void CWallet::AvailableCoinsForStaking(std::vector<COutput>& vCoins) const
             if (nDepth < 1)
                 continue;
 
-            if (nDepth < nStakeMinConfirmations)
+            if (nDepth < Params().GetConsensus().nStakeMinConfirmations)
                 continue;
 
             if (pcoin->GetBlocksToMaturity() > 0)

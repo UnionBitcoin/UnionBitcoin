@@ -55,7 +55,7 @@ int64_t posSleepTime = 0;
 
 extern CAmount nMinimumInputValue;
 extern CAmount nReserveBalance;
-extern int nStakeMinConfirmations;
+//extern int nStakeMinConfirmations;
 
 static bool CheckKernel(CBlock* pblock, const COutPoint& prevout, CAmount amount,int nHeight);
 //static bool CheckKernel(CBlock* pblock, const COutPoint& prevout, CAmount amount, int32_t utxoDepth);
@@ -1016,7 +1016,7 @@ bool CheckKernel(CBlock* pblock, const COutPoint& prevout, CAmount amount,int nH
 
 	int utxoHeight = coinStake.nHeight;
 	
-	if (utxoHeight > nHeight - nStakeMinConfirmations)
+	if (utxoHeight > nHeight - Params().GetConsensus().nStakeMinConfirmations)
 		return false;
 
     return CheckProofOfStake(pblock, prevout, amount, nHeight-utxoHeight);
@@ -1082,7 +1082,7 @@ bool CheckStake(CBlock* pblock)
     }
 
 	// Check stake min confirmations
-	if (coinStake.nHeight > (nHeight + 1) - nStakeMinConfirmations)
+	if (coinStake.nHeight > (nHeight + 1) - Params().GetConsensus().nStakeMinConfirmations)
 		return error("CheckStake() : utxo can not reach stake min confirmations");
 
 	if (!CheckProofOfStake(pblock, pblock->vtx[1]->vin[0].prevout, coinStake.out.nValue, (nHeight + 1)-coinStake.nHeight))
