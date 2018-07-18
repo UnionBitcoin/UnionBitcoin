@@ -3,7 +3,7 @@ from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
 from test_framework.mininode import CTransaction, NetworkThread
 from test_framework.blocktools import create_coinbase, create_block, add_witness_commitment
-from test_framework.script import CScript, read_contract_bytecode_hex, OP_CREATE, OP_CREATE_NATIVE, OP_CALL, OP_SPEND, \
+from test_framework.script import CScript, CScriptNum, read_contract_bytecode_hex, OP_CREATE, OP_CREATE_NATIVE, OP_CALL, OP_SPEND, \
     OP_DEPOSIT_TO_CONTRACT, OP_UPGRADE
 from io import BytesIO
 import time
@@ -197,7 +197,7 @@ def upgrade_contract(node, caller_addr, contract_addr, contract_name, contract_d
 def deposit_to_contract(node, caller_addr, contract_addr, deposit_amount, deposit_memo=" "):
     utxo = get_utxo(node, caller_addr)
     call_contract_script = CScript(
-        [config['CONTRACT_VERSION'], deposit_memo.encode('utf8'), int(deposit_amount * config['PRECISION']),
+        [config['CONTRACT_VERSION'], deposit_memo.encode('utf8'), CScriptNum(int(deposit_amount * config['PRECISION'])),
          contract_addr.encode("utf8"),
          caller_addr.encode('utf8'),
          5000, 10, OP_DEPOSIT_TO_CONTRACT])
