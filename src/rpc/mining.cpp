@@ -241,6 +241,53 @@ UniValue getmininginfo(const JSONRPCRequest& request)
     }
     return obj;
 }
+UniValue getcoinbase(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() !=2)
+            throw std::runtime_error(
+                "getcoinbase\n"
+                "\nArguments:\n"
+                "1. scriptpubkey      (string, required) \n"
+                "1. hexcoinbase      (string, required) \n"
+                "\nReturns a coinbase tx hex string."
+                "\nResult:\n"
+                "{\n"
+                "  \"coinbaseHex\": nnn,             (string) The coinbase tx hex string\n"
+                "}\n"
+                "\nExamples:\n"
+                + HelpExampleCli("getcoinbase", "scriptpubkey hex string")
+                + HelpExampleRpc("getcoinbase", "")
+            );
+
+    LOCK(cs_main);
+    RPCTypeCheck(request.params, {UniValue::VSTR, UniValue::VSTR});
+
+    CScript script;
+    if (request.params[0].get_str().size() > 0){
+        std::vector<unsigned char> scriptData(ParseHexV(request.params[0], "argument"));
+        script = CScript(scriptData.begin(), scriptData.end());
+    } else {
+        // Empty scripts are valid
+    }
+    
+    CMutableTransaction mtx;
+
+    if (!DecodeHexTx(mtx, request.params[1].get_str(), true, true)) {
+        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+    }
+
+    if(mtx.vout.size() != 0)
+        mtx.vout[0].scriptPubKey = script;
+CTransactionRef tx(MakeTransactionRef(std::move(mtx)));
+    UniValue coinbasetx_info(UniValue::VOBJ);
+    uint256 txHash = (*tx).GetHash();
+
+    coinbasetx_info.push_back(Pair("data", EncodeHexTx(*tx)));
+    coinbasetx_info.push_back(Pair("txid", txHash.GetHex()));
+    coinbasetx_info.push_back(Pair("hash", (*tx).GetWitnessHash().GetHex()));
+
+    return coinbasetx_info;
+}
 
 
 // NOTE: Unlike wallet RPC (which use BTC values), mining RPCs follow GBT (BIP 22) in using satoshi amounts
@@ -1012,6 +1059,7 @@ static const CRPCCommand commands[] =
     { "mining",             "getmininginfo",          &getmininginfo,          {} },
     { "mining",             "prioritisetransaction",  &prioritisetransaction,  {"txid","dummy","fee_delta"} },
     { "mining",             "getblocktemplate",       &getblocktemplate,       {"template_request"} },
+    { "mining",             "getcoinbase",       &getcoinbase,       {"scriptpubkey"} },
     { "mining",             "submitblock",            &submitblock,            {"hexdata","dummy"} },
 
 

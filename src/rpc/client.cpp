@@ -164,7 +164,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "rollbacktoheight", 1, "to_height" },
     { "getcontractstorage", 2, "contract_address" },
     { "createcontract", 5, "owner_address" },
-    { "callcontract", 7, "caller_address" }
+    { "callcontract", 7, "caller_address" },
+    { "getcoinbase", 2, "scriptpubkey" }
 };
 
 class CRPCConvertTable
