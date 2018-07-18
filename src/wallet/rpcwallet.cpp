@@ -1099,6 +1099,8 @@ UniValue createcontract(const JSONRPCRequest& request)
 
 	int nMinDepth = 3;
 	pwallet->AvailableCoins(vecOutputs, true, nullptr, 0, MAX_MONEY, MAX_MONEY, 0, nMinDepth, 9999999);
+	if(vecOutputs.empty())
+        throw JSONRPCError(RPC_TYPE_ERROR, "can't find utxo to use");
 
 	CAmount totalUsingUtxoAmount = 0;
 	std::vector<COutput> usingUtxos;
@@ -1353,6 +1355,8 @@ UniValue callcontract(const JSONRPCRequest& request)
 
     int nMinDepth = 3;
     pwallet->AvailableCoins(vecOutputs, true, nullptr, 0, MAX_MONEY, MAX_MONEY, 0, nMinDepth, 9999999);
+    if(vecOutputs.empty())
+        throw JSONRPCError(RPC_TYPE_ERROR, "can't find utxo to use");
 
     CAmount totalUsingUtxoAmount = 0;
     std::vector<COutput> usingUtxos;

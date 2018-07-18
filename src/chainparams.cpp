@@ -15,9 +15,11 @@
 #include <chainparamsseeds.h>
 #include <chain.h>
 
+//int nStakeMinConfirmations = 4800;
+
 CChain chainActive;
-//int nStakeMinConfirmations = 0;
-//int COINBASE_MATURITY_FORKV1 = 0;
+
+int COINBASE_MATURITY_FORKV1 = 7200;
 
 //bool ThreadPOSstate=true;
 
@@ -86,16 +88,16 @@ void CChainParams::UpdateVersionBitsParameters(Consensus::DeploymentPos d, int64
  * + Contains no strange transactions
  */
 
-//uint64_t UB_FORK_BLOCK_NUM = 498777;
-//uint64_t UB_FORK1_BLOCK_NUM = 506400;
+uint64_t UB_FORK_BLOCK_NUM = 498777;
+uint64_t UB_FORK1_BLOCK_NUM = 506400;
 
 class CMainParams : public CChainParams {
 public:
     CMainParams() {
         strNetworkID = "main";
-        consensus.nStakeMinConfirmations = 4800;
-        consensus.COINBASE_MATURITY_FORKV1 = 7200;
         consensus.nSubsidyHalvingInterval = 210000;
+        consensus.nStakeMinConfirmations = 4800;
+        COINBASE_MATURITY_FORKV1 = 7200;
         consensus.BIP16Height = 173805; // 00000000000000ce80a7e057163a4db1d5ad7b20fb6f598c9597b9665c8fb0d4 - April 1, 2012
         consensus.BIP34Height = 227931;
         consensus.BIP34Hash = uint256S("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8");
@@ -107,13 +109,13 @@ public:
 
         // hard fork
         consensus.UBCHeight = 498777 ;
-		//UB_FORK_BLOCK_NUM = consensus.UBCHeight;
+		UB_FORK_BLOCK_NUM = consensus.UBCHeight;
 
         consensus.UBCInitBlockCount = 500;
         consensus.UBCONTRACT_Height = 551111;
 	// Fork to adjust block interval (ForkV1)
 	consensus.ForkV1Height = 506400;
-	//UB_FORK1_BLOCK_NUM = consensus.ForkV1Height;
+	UB_FORK1_BLOCK_NUM = consensus.ForkV1Height;
 
         // UnionBitcoin foundation multisig address
         consensus.UBCfoundationAddress = "31rZdrTpN57Wbfhg7xTPxeFGjEQaMBjxoo";
@@ -231,7 +233,7 @@ public:
         strNetworkID = "test";
         consensus.nSubsidyHalvingInterval = 210000;
         consensus.nStakeMinConfirmations = 10;
-        consensus.COINBASE_MATURITY_FORKV1 = 20;
+        COINBASE_MATURITY_FORKV1 = 20;
         consensus.BIP16Height = 0; // 00000000040b4e986385315e14bee30ad876d8b47f748025b26683116d21aa65
 //        consensus.BIP34Height = 21111;
 //        consensus.BIP34Hash = uint256S("0x0000000023b3a96d3484e5abb3755c413e7d41500f8e2a5c3f0dd01299cd8ef8");
@@ -243,12 +245,12 @@ public:
 
         // hard fork
         consensus.UBCHeight = 0 ;
-		//UB_FORK_BLOCK_NUM = consensus.UBCHeight;
+		UB_FORK_BLOCK_NUM = consensus.UBCHeight;
         consensus.UBCInitBlockCount = 0; // 500
         consensus.UBCONTRACT_Height = 100;
 	    // Fork to adjust block interval (ForkV1)
     	consensus.ForkV1Height = 50;
-    	//UB_FORK1_BLOCK_NUM = consensus.ForkV1Height;
+    	UB_FORK1_BLOCK_NUM = consensus.ForkV1Height;
 	
         // UnionBitcoin foundation
         consensus.UBCfoundationPubkey = "026b440cc0f0533a0144a66ac8d297e5df557f3c3c33224e3c40c79c45beda9406";
@@ -354,12 +356,12 @@ public:
 
         // hard fork
         consensus.UBCHeight = 0 ;
-		//UB_FORK_BLOCK_NUM = consensus.UBCHeight;
+		UB_FORK_BLOCK_NUM = consensus.UBCHeight;
         consensus.UBCInitBlockCount = 0; // 500
         consensus.UBCONTRACT_Height = 1500;
 	// Fork to adjust block interval (ForkV1)
 	consensus.ForkV1Height = 1400;
-	//UB_FORK1_BLOCK_NUM = consensus.ForkV1Height;
+	UB_FORK1_BLOCK_NUM = consensus.ForkV1Height;
 	
         // UnionBitcoin foundation
         consensus.UBCfoundationPubkey = "026b440cc0f0533a0144a66ac8d297e5df557f3c3c33224e3c40c79c45beda9406";

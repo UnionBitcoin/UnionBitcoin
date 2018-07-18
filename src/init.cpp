@@ -331,12 +331,26 @@ void OnRPCStopped()
 
 std::string HelpMessage(HelpMessageMode mode)
 {
-    const auto defaultBaseParams = CreateBaseChainParams(CBaseChainParams::MAIN);
-    const auto testnetBaseParams = CreateBaseChainParams(CBaseChainParams::TESTNET);
-    const auto defaultChainParams = CreateChainParams(CBaseChainParams::MAIN);
-    const auto testnetChainParams = CreateChainParams(CBaseChainParams::TESTNET);
-    const bool showDebug = gArgs.GetBoolArg("-help-debug", false);
+    std::unique_ptr<CBaseChainParams> testnetBaseParams;
+    std::unique_ptr<CBaseChainParams> defaultBaseParams;
+    std::unique_ptr<CChainParams> testnetChainParams;
+    std::unique_ptr<CChainParams> defaultChainParams;
 
+    if(Params().NetworkIDString() == CBaseChainParams::MAIN)
+    {
+        testnetBaseParams = CreateBaseChainParams(CBaseChainParams::TESTNET);
+        defaultBaseParams = CreateBaseChainParams(CBaseChainParams::MAIN);
+        testnetChainParams = CreateChainParams(CBaseChainParams::TESTNET);
+        defaultChainParams = CreateChainParams(CBaseChainParams::MAIN);
+    }
+    else
+    {
+        defaultBaseParams = CreateBaseChainParams(CBaseChainParams::MAIN);
+        testnetBaseParams = CreateBaseChainParams(CBaseChainParams::TESTNET);
+        defaultChainParams = CreateChainParams(CBaseChainParams::MAIN);
+        testnetChainParams = CreateChainParams(CBaseChainParams::TESTNET);
+    }
+    const bool showDebug = gArgs.GetBoolArg("-help-debug", false);
     // When adding new options to the categories, please keep and ensure alphabetical ordering.
     // Do not translate _(...) -help-debug options, Many technical terms, and only a very small audience, so is unnecessary stress to translators.
     std::string strUsage = HelpMessageGroup(_("Options:"));
