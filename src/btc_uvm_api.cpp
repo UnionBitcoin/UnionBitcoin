@@ -674,7 +674,7 @@ namespace uvm {
                 if(!res)
                     return 0;
 				auto hash = block.GetHash();
-				return uint32_t(hash.GetUint64(2)) % (1 << 31 - 1);
+				return uint32_t(hash.GetUint64(2)) % ((1 << 31) - 1);
             }
 
             std::string BtcUvmChainApi::get_transaction_id(lua_State *L)
@@ -722,7 +722,7 @@ namespace uvm {
 				if (!res)
 					return 0;
 				auto hash = block.GetHash();
-				return int32_t(hash.GetUint64(2)) % (1 << 31 - 1);
+				return int32_t(hash.GetUint64(2)) % ((1 << 31) - 1);
             }
 
 			static bool is_valid_event_name(const std::string& event_name) {
