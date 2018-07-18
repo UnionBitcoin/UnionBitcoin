@@ -238,6 +238,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 		txCoinBaseToChange.vout.push_back(root_state_hash_out);
 		originalRewardTx = txCoinBaseToChange;
         pblock->vtx[0] = MakeTransactionRef(std::move(txCoinBaseToChange));
+        pblocktemplate->vchCoinbaseRootStateHash =
+                std::vector<unsigned char>(root_state_hash_out.scriptPubKey.begin(),
+                                           root_state_hash_out.scriptPubKey.end());
     }
 
 	// rollback root state hash
@@ -528,6 +531,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlockPos(CWalletRef& pw
         tout.scriptPubKey = CScript() << ValtypeUtils::string_to_vch(root_state_hash_after_add_txs) << OP_ROOT_STATE_HASH;
         txCoinbase.vout.push_back(tout);
         pblock->vtx[0] = MakeTransactionRef(std::move(txCoinbase));
+        pblocktemplate->vchCoinbaseRootStateHash =
+                std::vector<unsigned char>(tout.scriptPubKey.begin(),
+                                           tout.scriptPubKey.end());
     }
 
     // rollback root state hash
