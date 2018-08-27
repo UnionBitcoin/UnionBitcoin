@@ -70,7 +70,7 @@ unsigned int luaS_hashlongstr(TString *ts) {
 */
 void luaS_resize(lua_State *L, int newsize) {
     int i;
-    stringtable *tb = &G(L)->strt;
+    stringtable *tb = &L->strt;
     if (newsize > tb->size) {  /* grow table if needed */
         luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
         for (i = tb->size; i < newsize; i++)
@@ -100,12 +100,12 @@ void luaS_resize(lua_State *L, int newsize) {
 ** Clear API string cache. (Entries cannot be empty, so fill them with
 ** a non-collectable string.)
 */
-void luaS_clearcache(global_State *g) {
+void luaS_clearcache(lua_State *L) {
     int i, j;
     for (i = 0; i < STRCACHE_N; i++)
         for (j = 0; j < STRCACHE_M; j++) {
-            if (iswhite(g->strcache[i][j]))  /* will entry be collected? */
-                g->strcache[i][j] = g->memerrmsg;  /* replace it with something fixed */
+            if (iswhite(L->strcache[i][j]))  /* will entry be collected? */
+                L->strcache[i][j] = L->memerrmsg;  /* replace it with something fixed */
         }
 }
 
@@ -114,15 +114,14 @@ void luaS_clearcache(global_State *g) {
 ** Initialize the string table and the string cache
 */
 void luaS_init(lua_State *L) {
-    global_State *g = G(L);
     int i, j;
     luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
     /* pre-create memory-error message */
-    g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
-    luaC_fix(L, obj2gco(g->memerrmsg));  /* it should never be collected */
+    L->memerrmsg = luaS_newliteral(L, MEMERRMSG);
+    luaC_fix(L, obj2gco(L->memerrmsg));  /* it should never be collected */
     for (i = 0; i < STRCACHE_N; i++)  /* fill cache with valid strings */
         for (j = 0; j < STRCACHE_M; j++)
-            g->strcache[i][j] = g->memerrmsg;
+            L->strcache[i][j] = L->memerrmsg;
 }
 
 
@@ -145,14 +144,14 @@ static TString *createstrobj(lua_State *L, size_t l, int tag, unsigned int h) {
 
 
 TString *luaS_createlngstrobj(lua_State *L, size_t l) {
-    TString *ts = createstrobj(L, l, LUA_TLNGSTR, G(L)->seed);
+    TString *ts = createstrobj(L, l, LUA_TLNGSTR, L->seed);
     ts->u.lnglen = l;
     return ts;
 }
 
 
 void luaS_remove(lua_State *L, TString *ts) {
-    stringtable *tb = &G(L)->strt;
+    stringtable *tb = &L->strt;
     TString **p = &tb->hash[lmod(ts->hash, tb->size)];
     while (*p != ts)  /* find previous element */
         p = &(*p)->u.hnext;
@@ -166,29 +165,25 @@ void luaS_remove(lua_State *L, TString *ts) {
 */
 static TString *internshrstr(lua_State *L, const char *str, size_t l) {
     TString *ts;
-    global_State *g = G(L);
-    unsigned int h = luaS_hash(str, l, g->seed);
-    TString **list = &g->strt.hash[lmod(h, g->strt.size)];
+    unsigned int h = luaS_hash(str, l, L->seed);
+    TString **list = &L->strt.hash[lmod(h, L->strt.size)];
     lua_assert(str != nullptr);  /* otherwise 'memcmp'/'memcpy' are undefined */
     for (ts = *list; ts != nullptr; ts = ts->u.hnext) {
         if (l == ts->shrlen &&
             (memcmp(str, getstr(ts), l * sizeof(char)) == 0)) {
-            /* found! */
-            if (isdead(g, ts))  /* dead (but not collected yet)? */
-                changewhite(ts);  /* resurrect it */
             return ts;
         }
     }
-    if (g->strt.nuse >= g->strt.size && g->strt.size <= MAX_INT / 2) {
-        luaS_resize(L, g->strt.size * 2);
-        list = &g->strt.hash[lmod(h, g->strt.size)];  /* recompute with new size */
+    if (L->strt.nuse >= L->strt.size && L->strt.size <= MAX_INT / 2) {
+        luaS_resize(L, L->strt.size * 2);
+        list = &L->strt.hash[lmod(h, L->strt.size)];  /* recompute with new size */
     }
     ts = createstrobj(L, l, LUA_TSHRSTR, h);
     memcpy(getstr(ts), str, l * sizeof(char));
     ts->shrlen = cast_byte(l);
     ts->u.hnext = *list;
     *list = ts;
-    g->strt.nuse++;
+    L->strt.nuse++;
     return ts;
 }
 
@@ -219,7 +214,7 @@ TString *luaS_newlstr(lua_State *L, const char *str, size_t l) {
 TString *luaS_new(lua_State *L, const char *str) {
     unsigned int i = point2uint(str) % STRCACHE_N;  /* hash */
     int j;
-    TString **p = G(L)->strcache[i];
+    TString **p = L->strcache[i];
     for (j = 0; j < STRCACHE_M; j++) {
         if (strcmp(str, getstr(p[j])) == 0)  /* hit? */
             return p[j];  /* that is it */

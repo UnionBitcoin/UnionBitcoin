@@ -46,6 +46,7 @@ static const luaL_Reg loadedlibs[] = {
     { LUA_STRLIBNAME, luaopen_string },
     { LUA_TIMELIBNAME, luaopen_time },
     { LUA_MATHLIBNAME, luaopen_math },
+	{ LUA_SAFEMATHLIBNAME, luaopen_safemath },
     { LUA_JSONLIBNAME, luaopen_json },
     { LUA_UTF8LIBNAME, luaopen_utf8 },
     { nullptr, nullptr }

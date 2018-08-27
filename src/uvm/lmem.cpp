@@ -76,25 +76,21 @@ l_noret luaM_toobig(lua_State *L) {
 */
 void *luaM_realloc_(lua_State *L, void *block, size_t osize, size_t nsize) {
     void *newblock;
-    global_State *g = G(L);
     size_t realosize = (block) ? osize : 0;
     lua_assert((realosize == 0) == (block == nullptr));
 #if defined(HARDMEMTESTS)
     if (nsize > realosize && g->gcrunning)
         luaC_fullgc(L, 1);  /* force a GC whenever possible */
 #endif
-    newblock = (*g->frealloc)(g->ud, block, osize, nsize);
+    newblock = (*L->frealloc)(L->ud, block, osize, nsize);
     if (newblock == nullptr && nsize > 0) {
         lua_assert(nsize > realosize);  /* cannot fail when shrinking a block */
-        if (g->version) {  /* is state fully built? */
-            luaC_fullgc(L, 1);  /* try to free some memory... */
-            newblock = (*g->frealloc)(g->ud, block, osize, nsize);  /* try again */
-        }
+		luaC_fullgc(L, 1);  /* try to free some memory... */
+		newblock = (*L->frealloc)(L->ud, block, osize, nsize);  /* try again */
         if (newblock == nullptr)
             luaD_throw(L, LUA_ERRMEM);
     }
     lua_assert((nsize == 0) == (newblock == nullptr));
-    g->GCdebt = (g->GCdebt + nsize) - realosize;
     return newblock;
 }
 

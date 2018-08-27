@@ -254,6 +254,7 @@ libbitcoin_server_a_SOURCES = \
     uvm/ljsonrpclib.cpp \
     uvm/llex.cpp \
     uvm/lmathlib.cpp \
+    uvm/lsafemathlib.cpp \
     uvm/lmem.cpp \
     uvm/lnetlib.cpp \
     uvm/loadlib.cpp \
@@ -315,6 +316,9 @@ libbitcoin_server_a_SOURCES = \
     contract_storage/change.cpp \
     contract_storage/contract_info.cpp \
     contract_storage/contract_storage.cpp \
+    vmgc/gcobject.cpp \
+    vmgc/gcstate.cpp \
+    vmgc/vmgc.cpp \
   $(BITCOIN_CORE_H)
 
 if ENABLE_ZMQ

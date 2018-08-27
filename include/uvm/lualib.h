@@ -50,6 +50,9 @@ LUAMOD_API int (luaopen_bit32)(lua_State *L);
 #define LUA_MATHLIBNAME	"math"
 LUAMOD_API int (luaopen_math)(lua_State *L);
 
+#define LUA_SAFEMATHLIBNAME	"safemath"
+LUAMOD_API int (luaopen_safemath)(lua_State *L);
+
 #define LUA_UVMLIBNAME "uvm"
 LUAMOD_API int(luaopen_uvm)(lua_State *L);
 

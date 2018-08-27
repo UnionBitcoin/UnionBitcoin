@@ -110,7 +110,7 @@ static std::string geterrorobjstr(lua_State *L, int errcode)
 static void seterrorobj(lua_State *L, int errcode, StkId oldtop) {
     switch (errcode) {
     case LUA_ERRMEM: {  /* memory error? */
-        setsvalue2s(L, oldtop, G(L)->memerrmsg); /* reuse preregistered msg. */
+        setsvalue2s(L, oldtop, L->memerrmsg); /* reuse preregistered msg. */
         break;
     }
     case LUA_ERRERR: {
@@ -132,31 +132,23 @@ void luaD_throw(lua_State *L, int errcode) {
         LUAI_THROW(L, L->errorJmp);  // jump to it
     }
     else {  // thread has no error handler 
-        global_State *g = G(L);
-        L->status = cast_byte(errcode);  // mark it as dead 
-        if (g->mainthread->errorJmp) {  // main thread has a handler? 
-            setobjs2s(L, g->mainthread->top++, L->top - 1);  // copy error obj.
-            luaD_throw(g->mainthread, errcode);  // re-throw in main thread
-        }
-        else {  // no handler at all; abort
-            std::string errmsg;
-            if (g->panic) {  // panic function?
-                seterrorobj(L, errcode, L->top);  // assume EXTRA_STACK
-                if (L->ci->top < L->top)
-                    L->ci->top = L->top;  // pushing msg. can break this invariant
-                lua_unlock(L);
-                errmsg = geterrorobjstr(L, errcode);
-                g->panic(L);  // call panic function (last chance to jump out)
-            }
-            else
-            {
-                errmsg = "not found global function";
-            }
-            // abort();
-            global_uvm_chain_api->throw_exception(L, UVM_API_SIMPLE_ERROR, errmsg.c_str());
-            uvm::lua::lib::notify_lua_state_stop(L);
-            L->force_stopping = true;
-        }
+		std::string errmsg;
+		if (L->panic) {  // panic function?
+			seterrorobj(L, errcode, L->top);  // assume EXTRA_STACK
+			if (L->ci->top < L->top)
+				L->ci->top = L->top;  // pushing msg. can break this invariant
+			lua_unlock(L);
+			errmsg = geterrorobjstr(L, errcode);
+			L->panic(L);  // call panic function (last chance to jump out)
+		}
+		else
+		{
+			errmsg = "not found global function";
+		}
+		// abort();
+		global_uvm_chain_api->throw_exception(L, UVM_API_SIMPLE_ERROR, errmsg.c_str());
+		uvm::lua::lib::notify_lua_state_stop(L);
+		L->force_stopping = true;
     }
 }
 
@@ -725,10 +717,7 @@ LUA_API int lua_yieldk(lua_State *L, int nresults, lua_KContext ctx,
     lua_lock(L);
     api_checknelems(L, nresults);
     if (L->nny > 0) {
-        if (L != G(L)->mainthread)
-            luaG_runerror(L, "attempt to yield across a C-call boundary");
-        else
-            luaG_runerror(L, "attempt to yield from outside a coroutine");
+        luaG_runerror(L, "attempt to yield from outside a coroutine");
     }
     L->status = LUA_YIELD;
     ci->extra = savestack(L, ci->func);  /* save current 'func' */

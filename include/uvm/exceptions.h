@@ -43,7 +43,7 @@ namespace uvm
 			inline virtual ~UvmException() {}
                 
 #ifdef WIN32
-            inline virtual const char* what() const noexcept
+            inline virtual const char* what() const
 #else
             inline virtual const char* what() const noexcept
 #endif 

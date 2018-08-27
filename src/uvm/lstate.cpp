@@ -65,7 +65,6 @@ typedef struct LX {
 */
 typedef struct LG {
     LX l;
-    global_State g;
 } LG;
 
 
@@ -98,13 +97,8 @@ static unsigned int makeseed(lua_State *L) {
 ** set GCdebt to a new value keeping the value (totalbytes + GCdebt)
 ** invariant (and avoiding underflows in 'totalbytes')
 */
-void luaE_setdebt(global_State *g, l_mem debt) {
-    l_mem tb = gettotalbytes(g);
-    lua_assert(tb > 0);
-    if (debt < tb - MAX_LMEM)
-        debt = tb - MAX_LMEM;  /* will make 'totalbytes == MAX_LMEM' */
-    g->totalbytes = tb - debt;
-    g->GCdebt = debt;
+void luaE_setdebt(l_mem debt) {
+    
 }
 
 
@@ -184,11 +178,11 @@ static void freestack(lua_State *L) {
 /*
 ** Create registry table and its predefined values
 */
-static void init_registry(lua_State *L, global_State *g) {
+static void init_registry(lua_State *L) {
     TValue temp;
     /* create registry */
     Table *registry = luaH_new(L);
-    sethvalue(L, &g->l_registry, registry);
+    sethvalue(L, &L->l_registry, registry);
     luaH_resize(L, registry, LUA_RIDX_LAST, 0);
     /* registry[LUA_RIDX_MAINTHREAD] = L */
     setthvalue(L, &temp, L);  /* temp = L */
@@ -204,15 +198,12 @@ static void init_registry(lua_State *L, global_State *g) {
 ** ('g->version' != nullptr flags that the state was completely build)
 */
 static void f_luaopen(lua_State *L, void *ud) {
-    global_State *g = G(L);
     UNUSED(ud);
     stack_init(L, L);  /* init stack */
-    init_registry(L, g);
+    init_registry(L);
     luaS_init(L);
     luaT_init(L);
     luaX_init(L);
-    g->gcrunning = 1;  /* allow gc */
-    g->version = lua_version(nullptr);
     luai_userstateopen(L);
 }
 
@@ -221,8 +212,7 @@ static void f_luaopen(lua_State *L, void *ud) {
 ** preinitialize a thread with consistent values without allocating
 ** any memory (to avoid errors)
 */
-static void preinit_thread(lua_State *L, global_State *g) {
-    G(L) = g;
+static void preinit_thread(lua_State *L) {
     L->stack = nullptr;
     L->ci = nullptr;
     L->nci = 0;
@@ -243,42 +233,39 @@ static void preinit_thread(lua_State *L, global_State *g) {
 
 
 static void close_state(lua_State *L) {
-    global_State *g = G(L);
     luaF_close(L, L->stack);  /* close all upvalues for this thread */
     luaC_freeallobjects(L);  /* collect all objects */
-    if (g->version)  /* closing a fully built state? */
+    if (L->version)  /* closing a fully built state? */
         luai_userstateclose(L);
-    luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
+    luaM_freearray(L, L->strt.hash, L->strt.size);
     freestack(L);
-    lua_assert(gettotalbytes(g) == sizeof(LG));
-    (*g->frealloc)(g->ud, fromstate(L), sizeof(LG), 0);  /* free main block */
+	if (L->gc_state) {
+		delete L->gc_state;
+		// L->ud = nullptr;
+	}
+    // (*g->frealloc)(L->ud, fromstate(L), sizeof(LG), 0);  /* free main block */
 }
 
 
 // TODO: remove lua thread
 LUA_API lua_State *lua_newthread(lua_State *L) {
-    global_State *g = G(L);
     lua_State *L1;
     lua_lock(L);
     luaC_checkGC(L);
     /* create new thread */
     L1 = &lua_cast(LX *, luaM_newobject(L, LUA_TTHREAD, sizeof(LX)))->l;
-    L1->marked = luaC_white(g);
     L1->tt = LUA_TTHREAD;
-    /* link it on list 'allgc' */
-    L1->next = g->allgc;
-    g->allgc = obj2gco(L1);
     /* anchor it on L stack */
     setthvalue(L, L->top, L1);
     api_incr_top(L);
-    preinit_thread(L1, g);
+    preinit_thread(L1);
     L1->hookmask = L->hookmask;
     L1->basehookcount = L->basehookcount;
     L1->hook = L->hook;
     resethookcount(L1);
     /* initialize L1 extra space */
-    memcpy(lua_getextraspace(L1), lua_getextraspace(g->mainthread),
-        LUA_EXTRASPACE);
+    /*memcpy(lua_getextraspace(L1), lua_getextraspace(g->mainthread),
+        LUA_EXTRASPACE);*/
     luai_userstatethread(L, L1);
     stack_init(L1, L);  /* init stack */
     lua_unlock(L);
@@ -299,18 +286,16 @@ void luaE_freethread(lua_State *L, lua_State *L1) {
 LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud) {
     int i;
     lua_State *L;
-    global_State *g;
-    LG *l = lua_cast(LG *, (*f)(ud, nullptr, LUA_TTHREAD, sizeof(LG)));
+	auto gc_state = new vmgc::GcState(LUA_MALLOC_TOTAL_SIZE);
+	if (!gc_state) return nullptr;
+    LG *l = lua_cast(LG *, (*f)(ud ? ud : gc_state, nullptr, LUA_TTHREAD, sizeof(LG)));
     if (l == nullptr) return nullptr;
     L = &l->l.l;
-    g = &l->g;
     L->next = nullptr;
     L->tt = LUA_TTHREAD;
-    g->currentwhite = bitmask(WHITE0BIT);
-    L->marked = luaC_white(g);
-    L->malloc_buffer = malloc(LUA_MALLOC_TOTAL_SIZE);
+	L->malloc_buffer = nullptr;// malloc(LUA_MALLOC_TOTAL_SIZE);
     L->malloc_pos = 0;
-    L->malloced_buffers = new std::list<std::pair<ptrdiff_t, ptrdiff_t>>();
+	L->gc_state = gc_state;
     memset(L->compile_error, 0x0, LUA_COMPILE_ERROR_MAX_LENGTH);
 	memset(L->runerror, 0x0, LUA_VM_EXCEPTION_STRNG_MAX_LENGTH);
     L->in = stdin;
@@ -319,37 +304,24 @@ LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud) {
     L->force_stopping = false;
 	L->exit_code = 0;
     L->preprocessor = nullptr;
-    preinit_thread(L, g);
-    g->frealloc = f;
-    g->ud = ud;
-    g->mainthread = L;
-    g->seed = makeseed(L);
-    g->gcrunning = 0;  /* no GC while building state */
-    g->GCestimate = 0;
-    g->strt.size = g->strt.nuse = 0;
-    g->strt.hash = nullptr;
-    setnilvalue(&g->l_registry);
-    g->panic = nullptr;
-    g->version = nullptr;
-    g->gcstate = GCSpause;
-    g->gckind = KGC_NORMAL;
-    g->allgc = g->finobj = g->tobefnz = g->fixedgc = nullptr;
-    g->sweepgc = nullptr;
-    g->gray = g->grayagain = nullptr;
-    g->weak = g->ephemeron = g->allweak = nullptr;
-    g->twups = nullptr;
-    g->totalbytes = sizeof(LG);
-    g->GCdebt = 0;
-    g->gcfinnum = 0;
-    g->gcpause = LUAI_GCPAUSE;
-    g->gcstepmul = LUAI_GCMUL;
+	static const lua_Number version = LUA_VERSION_NUM;
+	L->version = &version;
+	L->frealloc = f;
+	L->ud = ud ? ud : gc_state;
+	L->seed = makeseed(L);
+	setnilvalue(&L->l_registry);
+	L->strt.size = L->strt.nuse = 0;
+	L->strt.hash = nullptr;
+
+	L->panic = nullptr;
+    preinit_thread(L);
 
 	L->evalstacksize = 100;
 	L->evalstack = luaM_newvector(L, L->evalstacksize, TValue);
 	L->evalstacktop = L->evalstack;
 
 
-    for (i = 0; i < LUA_NUMTAGS; i++) g->mt[i] = nullptr;
+    for (i = 0; i < LUA_NUMTAGS; i++) L->mt[i] = nullptr;
     if (luaD_rawrunprotected(L, f_luaopen, nullptr) != LUA_OK) {
         /* memory allocation error: free partial state */
         close_state(L);
@@ -360,10 +332,7 @@ LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud) {
 
 
 LUA_API void lua_close(lua_State *L) {
-    L = G(L)->mainthread;  /* only the main thread can be closed */
     uvm::lua::lib::close_lua_state_values(L);
-    delete L->malloced_buffers;
-    free(L->malloc_buffer);
     lua_lock(L);
     close_state(L);
 }
@@ -374,87 +343,23 @@ static size_t align8(size_t s) {
     return ((s >> 3) + 1) << 3;
 };
 
-// FIXME: use memory page, and use best fit malloc strategy
-// TODO: change to better strategy
 void *lua_malloc(lua_State *L, size_t size)
 {
-    size = align8(size);
-    if (size > LUA_MALLOC_TOTAL_SIZE)
-    {
-        uvm::lua::lib::notify_lua_state_stop(L);
-        return nullptr;
-    }
-    if (L->malloced_buffers->size() < 1)
-    {
-        auto offset = L->malloc_pos;
-        void *p = (void*)((intptr_t)(L->malloc_buffer) + offset);
-        L->malloc_pos += size;
-        L->malloced_buffers->push_back(std::make_pair(offset, size));
-        return p;
-    }
-    std::pair<ptrdiff_t, ptrdiff_t> last_pair;
-    auto begin = L->malloced_buffers->begin();
-    for (auto it = begin; it != L->malloced_buffers->end(); ++it)
-    {
-        if (it == begin)
-        {
-            if (it->first > (ptrdiff_t)size)
-            {
-                // can alloc memory before first block
-                ptrdiff_t offset = 0;
-                void *p = L->malloc_buffer;
-                L->malloced_buffers->insert(L->malloced_buffers->begin(), std::make_pair(offset, size));
-                return p;
-            }
-            last_pair = *it;
-            continue;
-        }
-        if (it->first >= last_pair.first + last_pair.second + (ptrdiff_t)size)
-        {
-            ptrdiff_t offset = last_pair.first + last_pair.second;
-            void *p = (void*)((intptr_t)(L->malloc_buffer) + offset);
-            L->malloced_buffers->insert(it, std::make_pair(offset, size));
-            return p;
-        }
-        last_pair = *it;
-    }
-    if (L->malloc_pos + size > LUA_MALLOC_TOTAL_SIZE)
-    {
-        L->force_stopping = true;
-		lua_set_run_error(L, "malloc too large memory in lvm");
-        // uvm::lua::lib::notify_lua_state_stop(L);
-        return nullptr;
-    }
-    ptrdiff_t offset = L->malloc_pos;
-    void *p = (void*)((intptr_t)(L->malloc_buffer) + offset);
-    L->malloced_buffers->push_back(std::make_pair(offset, size));
-    L->malloc_pos += size;
-    return p;
+	return L->gc_state->gc_malloc(size);
 }
 
 void *lua_calloc(lua_State *L, size_t element_count, size_t element_size)
 {
-    void *p = lua_malloc(L, element_count * element_size);
-    if (nullptr == p)
-        return nullptr;
-    memset(p, 0, element_count * element_size);
-    return p;
+	auto p = L->gc_state->gc_malloc(element_count * element_size);
+	if (!p)
+		return nullptr;
+	memset(p, 0, element_count * element_size);
+	return p;
 }
 
 void lua_free(lua_State *L, void *address)
 {
     if (nullptr == address || nullptr == L)
         return;
-    auto offset = (intptr_t)address - (intptr_t)L->malloc_buffer;
-    if (offset < 0 || offset > LUA_MALLOC_TOTAL_SIZE)
-        return;
-    size_t offset_size = (size_t)offset;
-    for (auto it = L->malloced_buffers->begin(); it != L->malloced_buffers->end(); ++it)
-    {
-        if (it->first == offset_size)
-        {
-            L->malloced_buffers->erase(it);
-            return;
-        }
-    }
+	L->gc_state->gc_free(address);
 }

@@ -48,7 +48,7 @@ typedef enum {
 #define gfasttm(g,et,e) ((et) == nullptr ? nullptr : \
   ((et)->flags & (1u<<(e))) ? nullptr : luaT_gettm(et, e, (g)->tmname[e]))
 
-#define fasttm(l,et,e)	gfasttm(G(l), et, e)
+#define fasttm(l,et,e)	gfasttm(l, et, e)
 
 #define ttypename(x)	luaT_typenames_[(x) + 1]
 #define objtypename(x)	ttypename(ttnov(x))

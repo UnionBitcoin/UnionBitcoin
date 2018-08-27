@@ -535,7 +535,7 @@ static const char *getfuncname(lua_State *L, CallInfo *ci, const char **name) {
     case UOP_LE: tm = TM_LE; break;
     default: lua_assert(0);  /* other instructions cannot call a function */
     }
-    *name = getstr(G(L)->tmname[tm]);
+    *name = getstr(L->tmname[tm]);
     return "metamethod";
 }
 
