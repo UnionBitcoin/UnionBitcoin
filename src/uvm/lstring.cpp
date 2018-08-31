@@ -70,7 +70,7 @@ unsigned int luaS_hashlongstr(TString *ts) {
 */
 void luaS_resize(lua_State *L, int newsize) {
     int i;
-    stringtable *tb = &G(L)->strt;
+    stringtable *tb = &state_G(L)->strt;
     if (newsize > tb->size) {  /* grow table if needed */
         luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
         for (i = tb->size; i < newsize; i++)
@@ -114,7 +114,7 @@ void luaS_clearcache(global_State *g) {
 ** Initialize the string table and the string cache
 */
 void luaS_init(lua_State *L) {
-    global_State *g = G(L);
+    global_State *g = state_G(L);
     int i, j;
     luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
     /* pre-create memory-error message */
@@ -145,14 +145,14 @@ static TString *createstrobj(lua_State *L, size_t l, int tag, unsigned int h) {
 
 
 TString *luaS_createlngstrobj(lua_State *L, size_t l) {
-    TString *ts = createstrobj(L, l, LUA_TLNGSTR, G(L)->seed);
+    TString *ts = createstrobj(L, l, LUA_TLNGSTR, state_G(L)->seed);
     ts->u.lnglen = l;
     return ts;
 }
 
 
 void luaS_remove(lua_State *L, TString *ts) {
-    stringtable *tb = &G(L)->strt;
+    stringtable *tb = &state_G(L)->strt;
     TString **p = &tb->hash[lmod(ts->hash, tb->size)];
     while (*p != ts)  /* find previous element */
         p = &(*p)->u.hnext;
@@ -166,7 +166,7 @@ void luaS_remove(lua_State *L, TString *ts) {
 */
 static TString *internshrstr(lua_State *L, const char *str, size_t l) {
     TString *ts;
-    global_State *g = G(L);
+    global_State *g = state_G(L);
     unsigned int h = luaS_hash(str, l, g->seed);
     TString **list = &g->strt.hash[lmod(h, g->strt.size)];
     lua_assert(str != nullptr);  /* otherwise 'memcmp'/'memcpy' are undefined */
@@ -219,7 +219,7 @@ TString *luaS_newlstr(lua_State *L, const char *str, size_t l) {
 TString *luaS_new(lua_State *L, const char *str) {
     unsigned int i = point2uint(str) % STRCACHE_N;  /* hash */
     int j;
-    TString **p = G(L)->strcache[i];
+    TString **p = state_G(L)->strcache[i];
     for (j = 0; j < STRCACHE_M; j++) {
         if (strcmp(str, getstr(p[j])) == 0)  /* hit? */
             return p[j];  /* that is it */

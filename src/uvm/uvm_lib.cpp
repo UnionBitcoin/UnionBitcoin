@@ -55,7 +55,7 @@ namespace uvm
 #define LUA_MAYBE_CHANGE_STORAGE_CONTRACT_IDS_STATE_KEY "maybe_change_storage_contract_ids_state"
 
             static const char *globalvar_whitelist[] = {
-                "print", "pprint", "table", "string", "time", "math", "json", "type", "require", "Array", "Stream",
+                "print", "pprint", "table", "string", "time", "math", "safemath", "json", "type", "require", "Array", "Stream",
                 "import_contract_from_address", "import_contract", "emit", "is_valid_address", "is_valid_contract_address",
 				"get_prev_call_frame_contract_address", "get_prev_call_frame_api_name", "get_contract_call_frame_stack_size",
                 "uvm", "storage", "exit", "self", "debugger", "exit_debugger",
@@ -1023,53 +1023,53 @@ end
 				return 1;
             }
 
-            static int gas_penalty_threshold = 100000; // when over this gas threshold, some api like fast_map_get/fast_map_set will cost more gas
+			static int gas_penalty_threshold = 100000; // when over this gas threshold, some api like fast_map_get/fast_map_set will cost more gas
 
-            static int fast_map_get(lua_State *L)
-            {
-                // fast_map_get(storage_name, key)
-                auto common_gas = 50;
-                if (uvm::lua::lib::get_lua_state_instructions_executed_count(L) > gas_penalty_threshold) {
-                    uvm::lua::lib::increment_lvm_instructions_executed_count(L, 1000 * common_gas - 1);
-                }
-                else {
-                    uvm::lua::lib::increment_lvm_instructions_executed_count(L, common_gas - 1);
-                }
-                if (lua_gettop(L) < 2 || !lua_isstring(L, 1) || !lua_isstring(L, 2)) {
-                    uvm::lua::api::global_uvm_chain_api->throw_exception(L, UVM_API_SIMPLE_ERROR, "invalid arguments of fast_map_get");
-                    L->force_stopping = true;
-                    lua_pushnil(L);
-                    return 1;
-                }
-                auto cur_contract_id = get_current_using_contract_id(L);
-                auto storage_name = luaL_checkstring(L, 1);
-                auto fast_map_key = luaL_checkstring(L, 2);
-                return uvm::lib::uvmlib_get_storage_impl(L, cur_contract_id.c_str(), storage_name, fast_map_key, true);
-            }
+			static int fast_map_get(lua_State *L)
+			{
+				// fast_map_get(storage_name, key)
+				auto common_gas = 50;
+				if (uvm::lua::lib::get_lua_state_instructions_executed_count(L) > gas_penalty_threshold) {
+					uvm::lua::lib::increment_lvm_instructions_executed_count(L, 1000 * common_gas - 1);
+				}
+				else {
+					uvm::lua::lib::increment_lvm_instructions_executed_count(L, common_gas - 1);
+				}
+				if (lua_gettop(L) < 2 || !lua_isstring(L, 1) || !lua_isstring(L, 2)) {
+					uvm::lua::api::global_uvm_chain_api->throw_exception(L, UVM_API_SIMPLE_ERROR, "invalid arguments of fast_map_get");
+					L->force_stopping = true;
+					lua_pushnil(L);
+					return 1;
+				}
+				auto cur_contract_id = get_current_using_contract_id(L);
+				auto storage_name = luaL_checkstring(L, 1);
+				auto fast_map_key = luaL_checkstring(L, 2);
+				return uvm::lib::uvmlib_get_storage_impl(L, cur_contract_id.c_str(), storage_name, fast_map_key, true);
+			}
 
-            static int fast_map_set(lua_State *L)
-            {
-                // fast_map_set(storage, key, value)
-                auto common_gas = 100;
-                if (uvm::lua::lib::get_lua_state_instructions_executed_count(L) > gas_penalty_threshold) {
-                    uvm::lua::lib::increment_lvm_instructions_executed_count(L, 1000 * common_gas - 1);
-                }
-                else {
-                    uvm::lua::lib::increment_lvm_instructions_executed_count(L, common_gas - 1);
-                }
-                if (lua_gettop(L) < 3 || !lua_isstring(L, 1) || !lua_isstring(L, 2)) {
-                    uvm::lua::api::global_uvm_chain_api->throw_exception(L, UVM_API_SIMPLE_ERROR, "invalid arguments of fast_map_set");
-                    L->force_stopping = true;
-                    lua_pushnil(L);
-                    return 1;
-                }
-                auto cur_contract_id = get_current_using_contract_id(L);
-                auto storage_name = luaL_checkstring(L, 1);
-                auto fast_map_key = luaL_checkstring(L, 2);
-                auto value_index = 3;
-                uvm::lib::uvmlib_set_storage_impl(L, cur_contract_id.c_str(), storage_name, fast_map_key, true, value_index);
-                return 0;
-            }
+			static int fast_map_set(lua_State *L)
+			{
+				// fast_map_set(storage, key, value)
+				auto common_gas = 100;
+				if (uvm::lua::lib::get_lua_state_instructions_executed_count(L) > gas_penalty_threshold) {
+					uvm::lua::lib::increment_lvm_instructions_executed_count(L, 1000 * common_gas - 1);
+				}
+				else {
+					uvm::lua::lib::increment_lvm_instructions_executed_count(L, common_gas - 1);
+				}
+				if (lua_gettop(L) < 3 || !lua_isstring(L, 1) || !lua_isstring(L, 2)) {
+					uvm::lua::api::global_uvm_chain_api->throw_exception(L, UVM_API_SIMPLE_ERROR, "invalid arguments of fast_map_set");
+					L->force_stopping = true;
+					lua_pushnil(L);
+					return 1;
+				}
+				auto cur_contract_id = get_current_using_contract_id(L);
+				auto storage_name = luaL_checkstring(L, 1);
+				auto fast_map_key = luaL_checkstring(L, 2);
+				auto value_index = 3;
+				uvm::lib::uvmlib_set_storage_impl(L, cur_contract_id.c_str(), storage_name, fast_map_key, true, value_index);
+				return 0;
+			}
 
             lua_State *create_lua_state(bool use_contract)
             {
@@ -2028,6 +2028,72 @@ end
             {
                 return execute_contract_api_by_stream(L, stream, "start", arg1, result_json_string) == LUA_OK;
             }
+
+			bool call_last_contract_api(lua_State* L, const std::string& contract_id, const std::string& api_name, const std::string& api_arg, std::string* result_json_string) {
+				using uvm::lua::api::global_uvm_chain_api;
+
+				lua_fill_contract_info_for_use(L);
+
+				lua_pushstring(L, CURRENT_CONTRACT_NAME);
+				lua_setfield(L, -2, "name");
+				lua_pushstring(L, contract_id.c_str());
+				lua_setfield(L, -2, "id");
+
+				for (const auto &special_api_name : uvm::lua::lib::contract_special_api_names)
+				{
+					if (special_api_name != api_name)
+					{
+						lua_pushnil(L);
+						lua_setfield(L, -2, special_api_name.c_str());
+					}
+				}
+
+				lua_getfield(L, -1, api_name.c_str());
+				if (lua_isfunction(L, -1))
+				{
+					lua_pushvalue(L, -2); // push self	
+					if (uvm::util::vector_contains(uvm::lua::lib::contract_int_argument_special_api_names, api_name))
+					{
+						std::stringstream arg_ss;
+						arg_ss << api_arg;
+						lua_Integer arg1_int = 0;
+						arg_ss >> arg1_int;
+						lua_pushinteger(L, arg1_int);
+					}
+					else
+					{
+						lua_pushstring(L, api_arg.c_str());
+					}
+
+					int status = lua_pcall(L, 2, 1, 0);
+					if (status != LUA_OK)
+					{
+						global_uvm_chain_api->throw_exception(L, UVM_API_SIMPLE_ERROR, "execute api %s contract error", api_name.c_str());
+						return false;
+					}
+					lua_pop(L, 1);
+					lua_pop(L, 1); // pop self
+				}
+				else
+				{
+					global_uvm_chain_api->throw_exception(L, UVM_API_SIMPLE_ERROR, "Can't find api %s in this contract", api_name.c_str());
+					lua_pop(L, 1);
+					return false;
+				}
+				// print call contract api result
+				if (lua_gettop(L)>0 && result_json_string)
+				{
+					// has result
+					lua_getglobal(L, "last_return");
+					auto last_return_value_json = luaL_tojsonstring(L, -1, nullptr);
+					auto last_return_value_json_string = std::string(last_return_value_json);
+					lua_pop(L, 1);
+					*result_json_string = last_return_value_json_string;
+				}
+
+				lua_pop(L, 1);
+				return true;
+			}
 
             std::string wrap_contract_name(const char *contract_name)
             {

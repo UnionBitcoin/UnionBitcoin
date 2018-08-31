@@ -204,7 +204,7 @@ static void init_registry(lua_State *L, global_State *g) {
 ** ('g->version' != nullptr flags that the state was completely build)
 */
 static void f_luaopen(lua_State *L, void *ud) {
-    global_State *g = G(L);
+    global_State *g = state_G(L);
     UNUSED(ud);
     stack_init(L, L);  /* init stack */
     init_registry(L, g);
@@ -222,7 +222,7 @@ static void f_luaopen(lua_State *L, void *ud) {
 ** any memory (to avoid errors)
 */
 static void preinit_thread(lua_State *L, global_State *g) {
-    G(L) = g;
+	state_G(L) = g;
     L->stack = nullptr;
     L->ci = nullptr;
     L->nci = 0;
@@ -243,12 +243,12 @@ static void preinit_thread(lua_State *L, global_State *g) {
 
 
 static void close_state(lua_State *L) {
-    global_State *g = G(L);
+    global_State *g = state_G(L);
     luaF_close(L, L->stack);  /* close all upvalues for this thread */
     luaC_freeallobjects(L);  /* collect all objects */
     if (g->version)  /* closing a fully built state? */
         luai_userstateclose(L);
-    luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
+    luaM_freearray(L, state_G(L)->strt.hash, state_G(L)->strt.size);
     freestack(L);
     lua_assert(gettotalbytes(g) == sizeof(LG));
     (*g->frealloc)(g->ud, fromstate(L), sizeof(LG), 0);  /* free main block */
@@ -257,7 +257,7 @@ static void close_state(lua_State *L) {
 
 // TODO: remove lua thread
 LUA_API lua_State *lua_newthread(lua_State *L) {
-    global_State *g = G(L);
+    global_State *g = state_G(L);
     lua_State *L1;
     lua_lock(L);
     luaC_checkGC(L);
@@ -360,7 +360,7 @@ LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud) {
 
 
 LUA_API void lua_close(lua_State *L) {
-    L = G(L)->mainthread;  /* only the main thread can be closed */
+    L = state_G(L)->mainthread;  /* only the main thread can be closed */
     uvm::lua::lib::close_lua_state_values(L);
     delete L->malloced_buffers;
     free(L->malloc_buffer);

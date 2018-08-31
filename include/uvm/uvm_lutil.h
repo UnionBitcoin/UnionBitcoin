@@ -17,6 +17,7 @@
 #include <list>
 #include <vector>
 #include <chrono>
+#include <algorithm>
 
 struct lua_State;
 
@@ -72,13 +73,7 @@ namespace uvm
 		}
 
 		template <typename T>
-		bool vector_contains(std::vector<T> &col, T &item)
-		{
-			return std::find(col.begin(), col.end(), item) != col.end();
-		}
-
-		template <typename T>
-		bool vector_contains(std::vector<T> col, const T &item)
+		bool vector_contains(std::vector<T> &col, const T &item)
 		{
 			return std::find(col.begin(), col.end(), item) != col.end();
 		}

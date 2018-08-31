@@ -73,8 +73,8 @@ UpVal *luaF_findupval(lua_State *L, StkId level) {
     *pp = uv;
     uv->v = level;  /* current value lives in the stack */
     if (!isintwups(L)) {  /* thread not in list of threads with upvalues? */
-        L->twups = G(L)->twups;  /* link it to the list */
-        G(L)->twups = L;
+        L->twups = state_G(L)->twups;  /* link it to the list */
+		state_G(L)->twups = L;
     }
     return uv;
 }

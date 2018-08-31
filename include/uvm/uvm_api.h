@@ -108,10 +108,11 @@ namespace uvm {
             storage_value_not_support = 202
         };
 
-        inline bool is_null_storage_value_type(StorageValueTypes type)
-        {
-            return type == StorageValueTypes::storage_value_null;
-        }
+		inline bool is_null_storage_value_type(StorageValueTypes type)
+		{
+			return type == StorageValueTypes::storage_value_null;
+		}
+
 
         inline bool is_any_base_storage_value_type(StorageValueTypes type)
         {
@@ -414,10 +415,10 @@ typedef struct UvmStorageChangeItem
     struct UvmStorageValue after;
 
 	std::string full_key() const {
-	    if(is_fast_map)
-		    return key + "." + fast_map_key;
-	    else
-	        return key;
+		if (is_fast_map)
+			return key + "." + fast_map_key;
+		else
+			return key;
 	}
 
 } UvmStorageChangeItem;

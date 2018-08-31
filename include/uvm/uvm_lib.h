@@ -386,6 +386,8 @@ namespace uvm
             bool execute_contract_init_by_address(lua_State *L, const char *contract_address, const char *arg1, std::string *result_json_string);
             bool execute_contract_start_by_address(lua_State *L, const char *contract_address, const char *arg1, std::string *result_json_string);
 
+			bool call_last_contract_api(lua_State* L, const std::string& contract_id, const std::string& api_name, const std::string& api_arg, std::string* result_json_string);
+
 			// whether the head of call stack is contract's init API
 			bool is_calling_contract_init_api(lua_State *L);
 

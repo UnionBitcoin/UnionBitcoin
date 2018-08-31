@@ -110,7 +110,7 @@ static std::string geterrorobjstr(lua_State *L, int errcode)
 static void seterrorobj(lua_State *L, int errcode, StkId oldtop) {
     switch (errcode) {
     case LUA_ERRMEM: {  /* memory error? */
-        setsvalue2s(L, oldtop, G(L)->memerrmsg); /* reuse preregistered msg. */
+        setsvalue2s(L, oldtop, state_G(L)->memerrmsg); /* reuse preregistered msg. */
         break;
     }
     case LUA_ERRERR: {
@@ -132,7 +132,7 @@ void luaD_throw(lua_State *L, int errcode) {
         LUAI_THROW(L, L->errorJmp);  // jump to it
     }
     else {  // thread has no error handler 
-        global_State *g = G(L);
+        global_State *g = state_G(L);
         L->status = cast_byte(errcode);  // mark it as dead 
         if (g->mainthread->errorJmp) {  // main thread has a handler? 
             setobjs2s(L, g->mainthread->top++, L->top - 1);  // copy error obj.
@@ -725,7 +725,7 @@ LUA_API int lua_yieldk(lua_State *L, int nresults, lua_KContext ctx,
     lua_lock(L);
     api_checknelems(L, nresults);
     if (L->nny > 0) {
-        if (L != G(L)->mainthread)
+        if (L != state_G(L)->mainthread)
             luaG_runerror(L, "attempt to yield across a C-call boundary");
         else
             luaG_runerror(L, "attempt to yield from outside a coroutine");

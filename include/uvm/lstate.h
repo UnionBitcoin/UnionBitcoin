@@ -227,7 +227,7 @@ void *lua_calloc(lua_State *L, size_t element_count, size_t element_size);
 void lua_free(lua_State *L, void *address);
 
 
-#define G(L)	(L->l_G)
+#define state_G(L)	(L->l_G)
 
 
 /*

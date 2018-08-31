@@ -254,6 +254,7 @@ libbitcoin_server_a_SOURCES = \
     uvm/ljsonrpclib.cpp \
     uvm/llex.cpp \
     uvm/lmathlib.cpp \
+    uvm/lsafemathlib.cpp \
     uvm/lmem.cpp \
     uvm/lnetlib.cpp \
     uvm/loadlib.cpp \

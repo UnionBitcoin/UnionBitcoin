@@ -1494,7 +1494,7 @@ int luaL_import_contract_module_from_address(lua_State *L)
         }
     } exit_scope1(update_loaded_func);
 
-    lua_call(L, 2, 1);  /* run loader to load module */
+    lua_pcall(L, 2, 1, 0);  /* run loader to load module */
     if (!lua_isnil(L, -1))  /* non-nil return? */
     {
         if (lua_istable(L, -1)) {
@@ -1735,7 +1735,7 @@ int luaL_import_contract_module(lua_State *L)
     }
     if (!exists)
     {
-        global_uvm_chain_api->throw_exception(L, UVM_API_SIMPLE_ERROR, "this contract not found");
+        global_uvm_chain_api->throw_exception(L, UVM_API_SIMPLE_ERROR, "contract %s not found", namestr.c_str());
         return 0;
     }
     if (!is_stream)
@@ -1760,7 +1760,7 @@ int luaL_import_contract_module(lua_State *L)
         }
     } exit_scope1(update_loaded_func);
 
-    lua_call(L, 2, 1);  /* run loader to load module */
+    lua_pcall(L, 2, 1, 0);  /* run loader to load module */
     if (!lua_isnil(L, -1))  /* non-nil return? */
     {
         if (lua_istable(L, -1)) {
