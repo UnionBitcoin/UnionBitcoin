@@ -20,6 +20,7 @@
 #include <memory>
 #include <thread>
 #include <chrono>
+#include <algorithm>
 
 #include <uvm/lua.h>
 
@@ -202,6 +203,14 @@ void luaV_finishget(lua_State *L, const TValue *t, TValue *key, StkId val,
 */
 void luaV_finishset(lua_State *L, const TValue *t, TValue *key,
     StkId val, const TValue *oldval) {
+	if (ttistable(t)) {
+		auto table_addr = (intptr_t)t->value_.gc;
+		if (L->allow_contract_modify != table_addr && L->contract_table_addresses
+			&& std::find(L->contract_table_addresses->begin(), L->contract_table_addresses->end(), table_addr) != L->contract_table_addresses->end()) {
+			luaG_runerror(L, "can't modify contract properties");
+			return;
+		}
+	}
     int loop;  /* counter to avoid infinite loops */
     for (loop = 0; loop < MAXTAGLOOP; loop++) {
         const TValue *tm;
@@ -822,6 +831,16 @@ void luaV_finishOp(lua_State *L) {
 
 /* same for 'luaV_settable' */
 #define settableProtected(L,t,k,v) { const TValue *slot; \
+	  Protect(        \
+	if (t && ttistable(t)) {           \
+		auto table_addr = (intptr_t)t->value_.gc;             \
+		if (L->allow_contract_modify != table_addr && L->contract_table_addresses           \
+			&& std::find(L->contract_table_addresses->begin(), L->contract_table_addresses->end(), table_addr) != L->contract_table_addresses->end()) { \
+			luaG_runerror(L, "can't modify contract properties"); \
+			return; \
+		} \
+	} \
+	); \
   if (!luaV_fastset(L,t,k,slot,luaH_get,v)) \
     Protect(luaV_finishset(L,t,k,v,slot)); }
 // FIXME: end duplicate code in uvm_lib.cpp

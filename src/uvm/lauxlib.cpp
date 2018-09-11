@@ -40,6 +40,7 @@
 #include <uvm/exceptions.h>
 #include <boost/variant.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/scope_exit.hpp>
 
 using uvm::lua::api::global_uvm_chain_api;
 
@@ -1495,6 +1496,10 @@ int luaL_import_contract_module_from_address(lua_State *L)
     } exit_scope1(update_loaded_func);
 
     lua_pcall(L, 2, 1, 0);  /* run loader to load module */
+
+	BOOST_SCOPE_EXIT_ALL(L) {
+		L->allow_contract_modify = 0;
+	};
     if (!lua_isnil(L, -1))  /* non-nil return? */
     {
         if (lua_istable(L, -1)) {
@@ -1632,7 +1637,19 @@ int luaL_import_contract_module_from_address(lua_State *L)
             return 0;
         }
 
+		{
+			auto contract_addr = (intptr_t)lua_topointer(L, -1);
+			L->contract_table_addresses->push_back(contract_addr);
+			L->allow_contract_modify = contract_addr;
+		}
+
         lua_fill_contract_info_for_use(L);
+
+		{
+			auto contract_addr = (intptr_t)lua_topointer(L, -1);
+			L->contract_table_addresses->push_back(contract_addr);
+			L->allow_contract_modify = contract_addr;
+		}
 
         // set name of contract to contract module table
         lua_pushstring(L, get_contract_name_using_in_lua(namestr).c_str());
@@ -1761,6 +1778,10 @@ int luaL_import_contract_module(lua_State *L)
     } exit_scope1(update_loaded_func);
 
     lua_pcall(L, 2, 1, 0);  /* run loader to load module */
+
+	BOOST_SCOPE_EXIT_ALL(L) {
+		L->allow_contract_modify = 0;
+	};
     if (!lua_isnil(L, -1))  /* non-nil return? */
     {
         if (lua_istable(L, -1)) {
@@ -1887,6 +1908,10 @@ int luaL_import_contract_module(lua_State *L)
             return 0;
         }
 
+		auto contract_addr = (intptr_t)lua_topointer(L, -1);
+		L->contract_table_addresses->push_back(contract_addr);
+		L->allow_contract_modify = contract_addr;
+
         lua_fill_contract_info_for_use(L);
 
         // set name of contract to contract module table
@@ -1984,6 +2009,10 @@ static int lua_real_execute_contract_api(lua_State *L
 
 	std::string api_name_str(api_name);
 
+	BOOST_SCOPE_EXIT_ALL(L) {
+		L->allow_contract_modify = 0;
+	};
+
     luaL_import_contract_module(L); // FIXME: maybe searcher_Lua changed api_name
     
     lua_settop(L, 1);  /* _LOADED table will be at index 2 */
@@ -2009,7 +2038,19 @@ static int lua_real_execute_contract_api(lua_State *L
     bool is_self = uvm::util::starts_with(contract_name, STREAM_CONTRACT_PREFIX)
         || uvm::util::starts_with(contract_name, ADDRESS_CONTRACT_PREFIX);
 
+	{
+		auto contract_addr = (intptr_t)lua_topointer(L, -1);
+		L->contract_table_addresses->push_back(contract_addr);
+		L->allow_contract_modify = contract_addr;
+	}
+
     lua_fill_contract_info_for_use(L);
+
+	{
+		auto contract_addr = (intptr_t)lua_topointer(L, -1);
+		L->contract_table_addresses->push_back(contract_addr);
+		L->allow_contract_modify = contract_addr;
+	}
 
     lua_pushstring(L, is_self ? CURRENT_CONTRACT_NAME : contract_name);
     lua_setfield(L, -2, "name");
