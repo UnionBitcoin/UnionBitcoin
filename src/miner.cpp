@@ -607,7 +607,7 @@ bool BlockAssembler::TestPackage(uint64_t packageSize, int64_t packageSigOpsCost
 //   segwit activation)
 bool BlockAssembler::TestPackageTransactions(const CTxMemPool::setEntries& package)
 {
-    for (const CTxMemPool::txiter it : package) {
+    for (CTxMemPool::txiter it : package) {
         CValidationState state;
         if (!ContextualCheckTransaction(it->GetTx(), state,
                                         chainparams.GetConsensus(), nHeight,
@@ -644,7 +644,7 @@ bool BlockAssembler::AttemptToAddContractToBlock(CTxMemPool::txiter iter, uint64
 	uint64_t blockGasLimit = UINT64_MAX;
     uint64_t allDepositAmount = 0;
     uint64_t allWithdrawFromContractAmount = 0;
-    for(const auto& withdrawInfo : resultConverter.contract_withdraw_infos) {
+    for(auto& withdrawInfo : resultConverter.contract_withdraw_infos) {
         allWithdrawFromContractAmount += withdrawInfo.amount;
     }
 	std::string error_str;
