@@ -4417,7 +4417,7 @@ static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state,
     return true;
 }
 
-bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW, bool fCheckMerkleRoot)
+bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW, bool fCheckMerkleRoot,bool fCheckPOS)
 {
     // These are checks that are independent of context.
 
@@ -4488,9 +4488,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
 
             if (block.IsProofOfStake() && iter->second->nHeight > Params().GetConsensus().ForkV4Height)
             {
-                if(!CheckStake((CBlock *)&block))
-                    return state.DoS(100, error("%s: CheckStake error.", __func__),
-                                     REJECT_INVALID, "bad-txns-CheckStake-failed");
+                if(fCheckPOS)
+                {
+                    if(!CheckStake((CBlock *)&block))
+                        return state.DoS(100, error("%s: CheckStake error.", __func__),
+                                         REJECT_INVALID, "bad-txns-CheckStake-failed");
+                }
             }
 		
 			if ((iter->second->nHeight >= Params().GetConsensus().UBCHeight -1) 
@@ -5516,7 +5519,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
         if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
             return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
-        if (nCheckLevel >= 1 && !CheckBlock(block, state, chainparams.GetConsensus()))
+        if (nCheckLevel >= 1 && !CheckBlock(block, state, chainparams.GetConsensus(),true,true,false))
             return error("%s: *** found bad block at %d, hash=%s (%s)\n", __func__,
                          pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         // check level 2: verify undo validity
