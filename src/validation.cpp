@@ -4486,7 +4486,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
       		       return error("checkblock() CheckProofOfStake");
       	   } 
 
-            if (block.IsProofOfStake() && iter->second->nHeight > Params().GetConsensus().ForkV4Height)
+            if (block.IsProofOfStake() && iter->second->nHeight+1 > Params().GetConsensus().ForkV4Height)
             {
                 if(fCheckPOS)
                 {
@@ -4554,7 +4554,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (nSigOps * WITNESS_SCALE_FACTOR > MaxBlockSigops(std::numeric_limits<uint64_t>::max()))
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-sigops", false, "out-of-bounds SigOpCount");
 
-    if (fCheckMerkleRoot)
+    if (fCheckMerkleRoot && !block.IsProofOfStake())
         block.fChecked = true;
 
     return true;
@@ -5060,7 +5060,7 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
         CValidationState state;
         // Ensure that CheckBlock() passes before calling AcceptBlock, as
         // belt-and-suspenders.
-        bool ret = CheckBlock(*pblock, state, chainparams.GetConsensus());
+        bool ret = CheckBlock(*pblock, state, chainparams.GetConsensus(),true,true,false);
 
         LOCK(cs_main);
 

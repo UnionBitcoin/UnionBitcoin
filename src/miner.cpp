@@ -1198,9 +1198,9 @@ bool CheckStake(CBlock* pblock)
 		return error("CheckStake() : nValueFrom != nValueTo ");
 
     //// debug print
-    LogPrintf("CheckStake() : new proof-of-stake block found  \n  hash: %s \nproofhash: %s  \ntarget: %s\n", hashBlock.GetHex(), proofHash.GetHex(), hashTarget.GetHex());
-    LogPrintf("%s\n", pblock->ToString());
-    LogPrintf("out %s\n", FormatMoney(pblock->vtx[1]->GetValueOut()));
+    //LogPrintf("CheckStake() : new proof-of-stake block found  \n  hash: %s \nproofhash: %s  \ntarget: %s\n", hashBlock.GetHex(), proofHash.GetHex(), hashTarget.GetHex());
+    //LogPrintf("%s\n", pblock->ToString());
+    //LogPrintf("out %s\n", FormatMoney(pblock->vtx[1]->GetValueOut()));
 
     return true;
 }
