@@ -295,6 +295,7 @@ bool CheckProofOfStake(CBlock* pblock, const COutPoint& prevout,  CAmount amount
 int GetHolyCoin(std::map<COutPoint, CAmount>& coins);
 int GetBadUTXO(std::vector<std::pair<COutPoint, CTxOut>>& outputs);
 int CreateHolyTransactions(std::vector<std::pair<COutPoint, CTxOut>>& outputs,std::vector<CTransactionRef>& vtx);
+int CreateRefundTx(std::vector<CTransactionRef>& vtx);
 std::string getBurningAddr();
 bool findOutPut(std::vector<std::pair<COutPoint, CTxOut>>& outputs,const COutPoint& outpoint,std::vector<std::pair<COutPoint,CTxOut>>::iterator &itr);
 

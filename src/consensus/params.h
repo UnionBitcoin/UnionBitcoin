@@ -71,6 +71,7 @@ struct Params {
 	int ForkV2Height;
 	int ForkV3Height;
 	int ForkV4Height;
+	int ForkV5Height;
 	
 
     /** Block height at which OP_RETURN replay protection stops */

@@ -3236,6 +3236,62 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 	    
 	    
     }
+
+    if(pindex->nHeight == Params().GetConsensus().ForkV5Height)
+    {
+        if(block.IsProofOfStake())
+            return state.DoS(100, error("This block must be pow block."), REJECT_INVALID, "invalid-block-version");
+
+        if(block.vtx.size() != 2)
+            return state.DoS(100, error("The block must only have 2 txs,error return."), REJECT_INVALID, "invalid-block");
+        if(!block.vtx[0]->IsCoinBase())
+            return state.DoS(100, error("The first tx is not coinbase,error return."), REJECT_INVALID, "invalid-block-tx");
+        if(block.vtx[1]->vin.size() != 1)
+            return state.DoS(100, error("The second tx must only have 1 vin,error return."), REJECT_INVALID, "invalid-block-tx");
+        if(block.vtx[1]->vout.size() != 3)
+            return state.DoS(100, error("The second tx must only have 3 vout,error return."), REJECT_INVALID, "invalid-block-tx");
+
+        COutPoint outpoint;
+	    outpoint.hash = block.vtx[1]->vin[0].prevout.hash;
+	    outpoint.n = block.vtx[1]->vin[0].prevout.n;
+		Coin coin;
+		view.GetCoin(outpoint, coin);
+	    if((coin.out.nValue != 2321414168296) ||  (outpoint.hash.GetHex() != "59ff1001a53d25636a0ab2fa6c6fad1af042971b8ef9e2ffc0dc5d6024ca82e5") || (outpoint.n != 0))
+	        return state.DoS(100, error("The second tx vin is wrong,error return."), REJECT_INVALID, "invalid-block-tx");
+
+	    CAmount sumVoutValue = 0;
+	    for(unsigned int vout=0;vout < block.vtx[1]->vout.size();vout++)
+	    {
+	        CAmount voutValue = block.vtx[1]->vout[vout].nValue;
+	        if(voutValue != 792809985302 && voutValue != 208950000 && voutValue != 1528394232994)
+	            return state.DoS(100, error("This tx vout value is wrong."), REJECT_INVALID, "invalid-block-tx");	 
+		    sumVoutValue += voutValue;
+		    //validate addr
+    	    txnouttype type;
+            std::string tmpAddr;
+            std::vector<CTxDestination> addresses;
+            int nRequired;
+            addresses.clear();
+            if (!ExtractDestinations(block.vtx[1]->vout[vout].scriptPubKey, type, addresses, nRequired)) {
+                  return state.DoS(100, error("This tx vout scriptpubkey is wrong."), REJECT_INVALID, "invalid-block-tx");
+            }
+            tmpAddr = EncodeDestination(addresses[0]);
+            if(tmpAddr != "1FXDtibGqZvbxAPwEa6o2ff9zH197Z5BKt" && tmpAddr != "14A94kvXiny71yQoCj8dftLDhQLzsdmEA5" &&tmpAddr != "15wJjXvfQzo3SXqoWGbWZmNYND1Si4siqV")
+                return state.DoS(100, error("This tx vout address is wrong."), REJECT_INVALID, "invalid-block-tx");	 
+            if((tmpAddr == "1FXDtibGqZvbxAPwEa6o2ff9zH197Z5BKt" && voutValue!=792809985302) || (tmpAddr == "14A94kvXiny71yQoCj8dftLDhQLzsdmEA5" && voutValue!=208950000) 
+            || (tmpAddr == "15wJjXvfQzo3SXqoWGbWZmNYND1Si4siqV" && voutValue!=1528394232994))
+            {
+                return state.DoS(100, error("This tx vout scriptpubkey is not consistent with nValue."), REJECT_INVALID, "invalid-block-tx");
+            }
+            
+	    }
+
+	    if(coin.out.nValue - sumVoutValue != 1000000)
+	    {
+	        return state.DoS(100, error("This tx fee is wrong."), REJECT_INVALID, "invalid-block-tx");
+	    }	    
+    }
+    
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);

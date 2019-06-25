@@ -94,7 +94,8 @@ void CChainParams::UpdateVersionBitsParameters(Consensus::DeploymentPos d, int64
 uint64_t UB_FORK_BLOCK_NUM = 498777;
 uint64_t UB_FORK1_BLOCK_NUM = 506400;
 uint64_t UB_FORK2_BLOCK_NUM = 572000;
-uint64_t UB_FORK4_BLOCK_NUM = 800000;
+uint64_t UB_FORK4_BLOCK_NUM = 813500;
+
 
 class CMainParams : public CChainParams {
 public:
@@ -130,6 +131,7 @@ public:
 	    consensus.SCANBADTX_Height = 788000;
 	    consensus.ForkV4Height = 813500;
 	    UB_FORK4_BLOCK_NUM = consensus.ForkV4Height;
+	    consensus.ForkV5Height = 860000;
 
         // UnionBitcoin foundation multisig address
         consensus.UBCfoundationAddress = "31rZdrTpN57Wbfhg7xTPxeFGjEQaMBjxoo";
@@ -273,6 +275,7 @@ public:
     	consensus.ForkV3Height = 180;
     	consensus.ForkV4Height = 200;
     	UB_FORK4_BLOCK_NUM = consensus.ForkV4Height;
+    	consensus.ForkV5Height = 220;
 	
         // UnionBitcoin foundation
         consensus.UBCfoundationPubkey = "026b440cc0f0533a0144a66ac8d297e5df557f3c3c33224e3c40c79c45beda9406";
@@ -392,6 +395,7 @@ public:
     	consensus.ForkV3Height = 1600;
     	consensus.ForkV4Height = 1800;
     	UB_FORK4_BLOCK_NUM = consensus.ForkV4Height;
+    	consensus.ForkV5Height = 2000;
     	
         // UnionBitcoin foundation
         consensus.UBCfoundationPubkey = "026b440cc0f0533a0144a66ac8d297e5df557f3c3c33224e3c40c79c45beda9406";

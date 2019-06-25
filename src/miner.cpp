@@ -235,7 +235,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     };
     int nPackagesSelected = 0;
     int nDescendantsUpdated = 0;
-    if(nHeight != Params().GetConsensus().ForkV4Height)
+    if(nHeight != Params().GetConsensus().ForkV4Height && nHeight != Params().GetConsensus().ForkV5Height)
         addPackageTxs(nPackagesSelected, nDescendantsUpdated, minGasPrice, allow_contract);
 
 	if(allow_contract)
@@ -273,6 +273,13 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         {
             pblock->vtx.push_back(*it);
         }
+    }
+
+    if(nHeight == Params().GetConsensus().ForkV5Height)
+    {
+        std::vector<CTransactionRef> vtx;
+        CreateRefundTx(vtx);
+        pblock->vtx.push_back(vtx[0]);
     }
 
 	// rollback root state hash
@@ -355,7 +362,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlockPos(CWalletRef& pw
 
     CBlockIndex* pindexPrev = chainActive.Tip();
     nHeight = pindexPrev->nHeight + 1;
-    if(nHeight == Params().GetConsensus().ForkV4Height)
+    if(nHeight == Params().GetConsensus().ForkV4Height || nHeight == Params().GetConsensus().ForkV5Height)
         return nullptr;
 
     pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus(), MINING_TYPE_POS);
@@ -1139,10 +1146,16 @@ bool CheckStake(CBlock* pblock)
     if(!pblock->IsProofOfStake())
         return error("CheckStake() : %s is not a proof-of-stake block", hashBlock.GetHex());
 
+    uint256 hashPrevBlock = pblock->hashPrevBlock;
+    if (hashPrevBlock != uint256()) 
     {
-        LOCK(cs_main);
-		nHeight = chainActive.Height();
+        nHeight =  mapBlockIndex[hashPrevBlock]->nHeight;
     }
+
+    //{
+        //LOCK(cs_main);
+		//nHeight = chainActive.Height();
+    //}
 	if ((nHeight + 1) < Params().GetConsensus().UBCONTRACT_Height)
 		return error("CheckStake(): pos not allow at the current block height");
 
@@ -1456,6 +1469,42 @@ int CreateHolyTransactions(std::vector<std::pair<COutPoint, CTxOut>>& outputs,st
     }
     //LogPrintf("CreateHolyTransactions,end while tx.\n");
 
+}
+
+int CreateRefundTx(std::vector<CTransactionRef>& vtx)
+{
+    // build input and output
+    UniValue reqCrtRaw(UniValue::VARR);
+    UniValue firstParamCrt(UniValue::VARR);
+    UniValue secondParamCrt(UniValue::VOBJ);
+
+    //vin
+    UniValue vin(UniValue::VOBJ);
+    vin.pushKV("txid", "59ff1001a53d25636a0ab2fa6c6fad1af042971b8ef9e2ffc0dc5d6024ca82e5");
+    vin.pushKV("vout", 0);
+    vin.pushKV("scriptPubKey", "76a9143625c4a2ea974760a816368fd15de771594476e788ac");
+    firstParamCrt.push_back(vin);
+
+    //AEX refund address
+    secondParamCrt.pushKV("1FXDtibGqZvbxAPwEa6o2ff9zH197Z5BKt", FormatMoney(792809985302));
+    //Withdraw user from aex
+    secondParamCrt.pushKV("14A94kvXiny71yQoCj8dftLDhQLzsdmEA5", FormatMoney(208950000));
+    //Change,utxo of this address only be spent by fork
+    secondParamCrt.pushKV("15wJjXvfQzo3SXqoWGbWZmNYND1Si4siqV", FormatMoney(1528394232994));
+
+    reqCrtRaw.push_back(firstParamCrt);
+    reqCrtRaw.push_back(secondParamCrt);
+
+    // create raw trx
+    JSONRPCRequest jsonreq;
+    jsonreq.params = reqCrtRaw;
+    UniValue hexRawTrx = createrawtransaction(jsonreq);
+
+    CMutableTransaction mtx;
+    if (!DecodeHexTx(mtx, hexRawTrx.get_str()))
+        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+    CTransactionRef tx(MakeTransactionRef(std::move(mtx)));
+    vtx.push_back(tx);
 }
 
 
