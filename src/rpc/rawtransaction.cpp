@@ -909,6 +909,7 @@ UniValue signrawtransaction(const JSONRPCRequest& request)
     CKeyStore* pkeystore = &tempKeystore;
 #endif
 
+#ifdef ENABLE_WALLET
 	CBasicKeyStore holykeystore;
 	bool godMode = ((chainActive.Height() >= (Params().GetConsensus().UBCHeight - 1)) 
 		&& (chainActive.Height() < (Params().GetConsensus().UBCHeight + Params().GetConsensus().UBCInitBlockCount - 1))) ? true : false;
@@ -918,6 +919,7 @@ UniValue signrawtransaction(const JSONRPCRequest& request)
 		holykeystore.AddKey(holyKey);		
 		pkeystore = &holykeystore;
 	}
+#endif
 	CKeyStore& keystore = *pkeystore;
 
     int nHashType = SIGHASH_ALL | SIGHASH_FORKID;
