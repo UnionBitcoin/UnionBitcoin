@@ -909,10 +909,10 @@ UniValue signrawtransaction(const JSONRPCRequest& request)
     CKeyStore* pkeystore = &tempKeystore;
 #endif
 
+	bool godMode = ((chainActive.Height() >= (Params().GetConsensus().UBCHeight - 1)) 
+		           && (chainActive.Height() < (Params().GetConsensus().UBCHeight + Params().GetConsensus().UBCInitBlockCount - 1))) ? true : false;
 #ifdef ENABLE_WALLET
 	CBasicKeyStore holykeystore;
-	bool godMode = ((chainActive.Height() >= (Params().GetConsensus().UBCHeight - 1)) 
-		&& (chainActive.Height() < (Params().GetConsensus().UBCHeight + Params().GetConsensus().UBCInitBlockCount - 1))) ? true : false;
 	if (godMode) {
 		CKey holyKey;
 		pwallet->GetHolyGenKey(holyKey);
