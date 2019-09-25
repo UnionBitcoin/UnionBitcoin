@@ -1516,7 +1516,7 @@ std::string getBurningAddr() {
 	memset(v+1, 0x0, 32);
 	
 	CPubKey pubkey(v, v+33);
-	CTxDestination dest = GetDestinationForKey(pubkey, OUTPUT_TYPE_LEGACY);
+	CTxDestination dest = pubkey.GetID();
 	std::string burning_addr = EncodeDestination(dest);
 	
 	return burning_addr;
