@@ -245,7 +245,9 @@ public:
 
     /** Construct a new block template with coinbase to scriptPubKeyIn */
     std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx=true, int64_t* pTotalFees = 0, int32_t nTime=0, int32_t nTimeLimit=0); // TODO: change the callee
+#ifdef ENABLE_WALLET
 	std::unique_ptr<CBlockTemplate> CreateNewBlockPos(CWalletRef& pwallet, int32_t nTimeLimit, bool fMineWitnessTx=true);
+#endif
 
 private:
     // utility functions
