@@ -325,6 +325,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     return std::move(pblocktemplate);
 }
 
+#ifdef ENABLE_WALLET
 std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlockPos(CWalletRef& pwallet, int32_t nTimeLimit, bool fMineWitnessTx)
 {
     //int64_t nTimeStart = GetTimeMicros();
@@ -609,6 +610,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlockPos(CWalletRef& pw
 
     return std::move(pblocktemplate);
 }
+#endif
 
 void BlockAssembler::RebuildRefundTransaction() {
 	CMutableTransaction contrTx(*(pblock->vtx[0]));

@@ -93,8 +93,9 @@ static CZMQNotificationInterface* pzmqNotificationInterface = nullptr;
 #endif
 
 static const char* FEE_ESTIMATES_FILENAME="fee_estimates.dat";
+#ifdef ENABLE_WALLET
 static void ThreadStakeMiner(CWallet *pwallet);
-
+#endif
 
 unsigned int nMinerSleep;
 extern int64_t posSleepTime;
@@ -1835,7 +1836,7 @@ bool AppInitMain()
     return true;
 }
 
-
+#ifdef ENABLE_WALLET
 static void ThreadStakeMiner(CWallet *pwallet)
 {
     // Make this thread recognisable as the mining thread
@@ -1940,6 +1941,6 @@ static void ThreadStakeMiner(CWallet *pwallet)
 
     }
 }
-
+#endif
 
 
